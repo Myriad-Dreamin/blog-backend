@@ -15,6 +15,10 @@ class CreateTableUsers extends Migration
     {
         Schema::create('table_users', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('title');
+            $table->text('intro');
+            $table->string('category');
+            $table->timestamps('published_at');
             $table->timestamps();
         });
     }

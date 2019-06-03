@@ -3,6 +3,10 @@
 /public/storage
 /storage/*.key
 /vendor
+.vscode
+.cache
+.config
+.composer
 .env
 .ssh
 .phpunit.result.cache

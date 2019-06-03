@@ -46,3 +46,11 @@ composer require laravelcollective/html
 php artisan tinker
 Form::text('foo')
 exit
+find / -name Summary of Propabilityv0.1.md
+find / -name 'Summary of Propabilityv0.1.md'
+ls
+cd storage
+ls
+cd app
+ls
+exit

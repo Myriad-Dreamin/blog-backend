@@ -13,7 +13,9 @@ class AddArticlePath extends Migration
      */
     public function up()
     {
-        //
+        Schema::table('articles', function($table){
+            $table->string('filepath');
+        });
     }
 
     /**
@@ -23,6 +25,8 @@ class AddArticlePath extends Migration
      */
     public function down()
     {
-        //
+        Schema::table('articles', function($table){
+            $table->dropColumn('filepath');
+        });
     }
 }

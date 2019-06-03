@@ -47,6 +47,8 @@ Route::get('/about', function () {
 
 Route::get('/articles', 'ArticlesController@index');
 
+Route::get('/articles/{id}', 'ArticlesController@show');
+
 Route::get('/backstage', 'BackstageController@index');
 
 

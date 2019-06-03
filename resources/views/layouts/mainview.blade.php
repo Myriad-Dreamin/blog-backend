@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <link rel="stylesheet" href="{{ URL::asset('css/navigator.css') }}">
     <link rel="stylesheet" href="{{ URL::asset('css/main.css') }}">
+    @yield('extension_files')
     <title>Article</title>
 </head>
 <body>

@@ -18,8 +18,15 @@
 
 .article_index_box .title a {
     font-size: 24px;
+    color: rgba(0, 0, 0);
+    text-decoration: none;
     font-family: 'Source Han Serif CN', 'Source Han Sans CN', 'Source Han Serif SC', 'Microsoft YaHei' ,'-apple-system', 'SF UI Display', 'Arial',
     'PingFang SC', 'Hiragino Sans GB' , 'WenQuanYi Micro Hei', sans-serif;
+}
+
+.article_index_box .title a:hover {
+    color: rgba(99, 107, 111, 0.7);
+    transition: all 0.2s;
 }
 
 .article_index_box .tagbox {

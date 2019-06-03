@@ -5,6 +5,10 @@
     <link rel="stylesheet" href="{{ URL::asset('css/articles/article_index_body.css') }}">
 @stop
 
+@section('extension_metas')
+    <title>Article</title>
+@stop
+
 
 @section('main_content')
     <div class="article_index_body"> 
@@ -12,7 +16,7 @@
         @foreach($articles as $article)
             <div class="article_index_box">
                 <div class="title">
-                    <a>{{ $article->title }}</a>
+                    <a href="{{url('articles', $article->id)}}">{{ $article->title }}</a>
                 </div>
                 <div class="tagbox">
                     <a class="category">Category: {{ $article->category }}</a>

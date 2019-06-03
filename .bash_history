@@ -54,3 +54,6 @@ ls
 cd app
 ls
 exit
+ls
+php artisan 
+php artisan tinker

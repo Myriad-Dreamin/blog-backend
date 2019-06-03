@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use \App\Article as Article;
-
+// use \App\Libs\MarkDownX\MarkDownX as MarkDown;
 
 class ArticlesController extends Controller
 {
@@ -24,7 +24,8 @@ class ArticlesController extends Controller
             dd('md file '. $local_path .' not found.');
             // abort(404, 'md file not found.');
         }
-        $content = \Storage::disk('articles')->get($local_path);
+        $parser = new \MarkJaxParser;
+        $content = $parser->makeHtml(\Storage::disk('articles')->get($local_path));
         return view("articles.article", compact("article", "content"));
     }
 }

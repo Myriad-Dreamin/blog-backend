@@ -15,7 +15,6 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/about', function () {
     // with -> (key string, value)
     // with -> (key string, [
     // ke1 => va1
@@ -41,7 +40,14 @@ Route::get('/about', function () {
     // env(key value)
 
     // compact value
+
+Route::get('/about', function () {
     return view('sites.about');
 });
+
+Route::get('/articles', 'ArticlesController@index');
+
+Route::get('/backstage', 'BackstageController@index');
+
 
 

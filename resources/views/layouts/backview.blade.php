@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="{{ URL::asset('css/navigator.css') }}">
     <link rel="stylesheet" href="{{ URL::asset('css/main.css') }}">
-    <title>Article</title>
+    <title>BackView</title>
 </head>
 <body>
     <div class="navigator">
 		<ul>
-			<li><a href="">Home</a></li>
-			<li><a href="">Article</a></li>
-			<li><a href="">Code</a></li>
+			<li><a href="http://103.114.161.226">Home</a></li>
+			<li><a href="http://103.114.161.226/articles">Article</a></li>
+			<li><a href="https://github.com/Myriad-Dreamin">Code</a></li>
 			<li><a href="">Mass Article</a></li>
 			<li><a href="">Mass Music</a></li>
 			<li><a href="">Mass Picture</a></li>

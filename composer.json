@@ -39,12 +39,14 @@
         },
         "classmap": [
             "database/seeds",
-            "database/factories"
+            "database/factories",
+            "app/Libs"
         ]
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "Tests\\": "tests/",
+            "app\\Libs\\": "app/Libs/"
         }
     },
     "minimum-stability": "dev",

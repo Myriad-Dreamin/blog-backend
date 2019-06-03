@@ -16,6 +16,31 @@ Route::get('/', function () {
 });
 
 Route::get('/about', function () {
+    // with -> (key string, value)
+    // with -> (key string, [
+    // ke1 => va1
+    //])
+    
+    // in app.blade.php
+    // @yield('content')
+    
+
+    // in some.blade.php
+    //
+    // @extends('app')
+    // @section('content')
+    // @stop
+
+    // @if(php-expression)
+    // @else
+    // @endif
+
+    // @foreach( v as v-arr)
+    // @endforeach
+    
+    // env(key value)
+
+    // compact value
     return view('sites.about');
 });
 

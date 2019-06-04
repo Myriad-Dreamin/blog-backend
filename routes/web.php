@@ -51,5 +51,7 @@ Route::get('/articles/{id}', 'ArticlesController@show');
 
 Route::get('/backstage', 'BackstageController@index');
 
+Route::get('/secretlove', 'ExtensionController@secretToMe');
 
+Route::get('/chocolate', 'ExtensionController@chocolate');
 

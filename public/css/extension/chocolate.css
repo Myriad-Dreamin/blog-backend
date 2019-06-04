@@ -1,12 +1,17 @@
 
 @import "../purewhite/index_box.css";
 
+.chocolate_index_body {
+    height: auto;
+    justify-content:center;
+    align-items:center;
+}
+
 .index_box {
     width: 80%;
     margin: 25px 10% 25px 10%;
     top: 0;
 }
-
 
 .index_box .title {
     padding: 10px 10% 1px 10%;
@@ -29,13 +34,6 @@
 .index_box .tagbox {
     padding: 1px 10% 1px 10%;
     text-align: center;
-}
-
-.tagbox .category, .tagbox .timetag {
-    margin: 1px 1em 1px 1em;
-    font-size: 10px;
-    font-family: 'Source Han Serif CN', 'Source Han Sans CN', 'Source Han Serif SC', 'Microsoft YaHei' ,'-apple-system', 'SF UI Display', 'Arial',
-    'PingFang SC', 'Hiragino Sans GB' , 'WenQuanYi Micro Hei', sans-serif;
 }
 
 .index_box .intro {

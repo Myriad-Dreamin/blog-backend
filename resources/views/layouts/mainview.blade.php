@@ -10,9 +10,11 @@
 <body>
     <div class="navigator">
 		<ul>
-			<li><a href="http://103.114.161.226">Home</a></li>
-			<li><a href="http://103.114.161.226/articles">Article</a></li>
+			<li><a href="http://myriaddreamin.com">Home</a></li>
+			<li><a href="http://myriaddreamin.com/articles">Article</a></li>
 			<li><a href="https://github.com/Myriad-Dreamin">Code</a></li>
+			<li><a href="http://myriaddreamin.com/secretlove">Mashmallo</a></li>
+			<li><a href="http://myriaddreamin.com/chocolate">Chocolate</a></li>
 		</ul>
         <div class="clear"></div>
     </div>

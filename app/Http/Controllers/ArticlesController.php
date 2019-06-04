@@ -12,7 +12,7 @@ class ArticlesController extends Controller
 
     public function index()
     {
-        $articles = Article::all();
+        $articles = Article::latest()->published()->get();
         return view("articles.index", compact("articles"));
     }
     
@@ -25,6 +25,7 @@ class ArticlesController extends Controller
             // abort(404, 'md file not found.');
         }
         $parser = new \MarkJaxParser;
+        $parser->enableMathJax(true);
         $content = $parser->makeHtml(\Storage::disk('articles')->get($local_path));
         return view("articles.article", compact("article", "content"));
     }

@@ -1,0 +1,9 @@
+
+.index_box {
+    display: block;
+    height: auto;
+    clear:both;
+    background: rgba(255, 255, 255, 0.800);
+    border-radius: 5px;
+    box-shadow: 0px 0px 3px #777777;
+}

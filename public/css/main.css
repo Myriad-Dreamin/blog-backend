@@ -15,6 +15,10 @@ body {
     margin-left: 5%;
 }
 
+.margin-right-5 {
+    margin-right: 5%;
+}
+
 .margin-left-12 {
     margin-left: 12%;
 }
@@ -24,4 +28,12 @@ body {
 }
 .margin-right-15 {
     margin-right: 15%;
+}
+
+.span-width20 {
+    width: 20%;
+}
+
+.span-width80 {
+    width: 80%;
 }

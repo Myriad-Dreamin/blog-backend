@@ -57,10 +57,10 @@
             <div class="clear" style="padding: 12.5px"></div>
             <div class="container">
                 <span class="tagbox">
-                    <a class="timetag">Publish at: {{ $article->published_at }}</a>
+                    <a class="timetag">Publish at: {{ $article->published_at }} UTC+0</a>
                 </span>
                 <span class="tagbox">
-                    <a class="timetag">Update at: {{ $article->updated_at }}</a>
+                    <a class="timetag">Update at: {{ $article->updated_at }} UTC+0</a>
                 </span>
             </div>
         </div>

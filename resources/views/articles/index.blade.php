@@ -14,7 +14,7 @@
     <div class="article_index_body"> 
         <div style="height: 50px; width:100%;"></div>
         @foreach($articles as $article)
-            <div class="article_index_box">
+            <div class="index_box">
                 <div class="title">
                     <a href="{{url('articles', $article->id)}}">{{ $article->title }}</a>
                 </div>
@@ -22,7 +22,7 @@
                     <a class="category">Category: {{ $article->category }}</a>
                 </div>
                 <div class="tagbox">
-                    <a class="timetag">Publish at:{{ $article->published_at }}</a>
+                    <a class="timetag">Publish at: {{ $article->published_at->diffForHumans() }}</a>
                 </div>
                 <div class="intro">
                     <a>{{ $article->intro }}</a>

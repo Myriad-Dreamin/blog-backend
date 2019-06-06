@@ -35,6 +35,9 @@
             }
         }
     </style>
+    <link href="https://cdn.bootcss.com/highlight.js/9.15.6/styles/atom-one-light.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/highlight.js/9.15.8/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
     <link rel="stylesheet" href="{{ URL::asset('css/articles/article_header_box.css') }}">
 @stop
 
@@ -68,4 +71,8 @@
             {!! $content !!}
         </div>
     </div>
+    <div style="height: 200px; width:100%;"></div>
+@stop
+
+@section('scripts')
 @stop

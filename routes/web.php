@@ -55,3 +55,5 @@ Route::get('/secretlove', 'ExtensionController@secretToMe');
 
 Route::get('/chocolate', 'ExtensionController@chocolate');
 
+Route::get('/musical', 'ExtensionController@musical');
+

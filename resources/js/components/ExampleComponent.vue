@@ -15,9 +15,14 @@
 </template>
 
 <script>
-    export default {
-        mounted() {
-            console.log('Component mounted.')
-        }
+export default {
+    data () {
+        return {
+            msg: 'This is a Example~!'
+        };
+    },
+    mounted() {
+        window.console.log('Component mounted.');
     }
+};
 </script>

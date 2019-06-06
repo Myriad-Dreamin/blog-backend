@@ -30,4 +30,12 @@
             </div>
         @endforeach
     </div>
+    <div id="app">
+        <!-- <example-component></example-component> -->
+        <router-view></router-view>
+    </div>
+@stop
+
+@section('scripts')
+    <script src="{{ mix('js/app.js') }}"></script>
 @stop

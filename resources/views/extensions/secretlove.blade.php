@@ -10,7 +10,7 @@
 
 @section('main_content')
     <div class="index_box">
-        <div class="title">Send Mashmallo to me</div>
+        <div class="title">Send Marshmello to me</div>
         {!! Form::open() !!}
         <div class="margin-left-5 margin-right-5">
             <div>
@@ -19,7 +19,7 @@
             </div>
             <div class="clear"></div>
             <div>
-                {!! Form::text('MashmalloName',null,['class'=>'mashmallo-name', 'placeholder'=>'Title']) !!}
+                {!! Form::text('MarshmelloName',null,['class'=>'marshmello-name', 'placeholder'=>'Title']) !!}
             </div>
             <div>
                 {!! Form::textarea('content',null,['class'=>'honey']) !!}

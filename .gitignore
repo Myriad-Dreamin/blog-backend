@@ -10,6 +10,7 @@
 .env
 .ssh
 .phpunit.result.cache
+.bash_history
 Homestead.json
 Homestead.yaml
 npm-debug.log

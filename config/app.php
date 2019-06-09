@@ -136,6 +136,8 @@ return [
 
     'providers' => [
 
+        
+        Laravel\Passport\PassportServiceProvider::class,
         /*
          * Laravel Framework Service Providers...
          */
@@ -167,7 +169,6 @@ return [
          */
         Barryvdh\Cors\ServiceProvider::class,
         Collective\Html\HtmlServiceProvider::class,
-
         /*
          * Application Service Providers...
          */

@@ -57,3 +57,7 @@ Route::get('/chocolate', 'ExtensionController@chocolate');
 
 Route::get('/musical', 'ExtensionController@musical');
 
+
+Auth::routes();
+
+Route::get('/home', 'HomeController@index')->name('home');

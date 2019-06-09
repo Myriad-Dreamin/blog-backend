@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use \App\Article as Article;
+use Psy\Util\Json;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,4 +35,13 @@ Route::middleware('api')->get('/article/{id}', function ($id) {
     $parser->enableMathJax(true);
     $article->content = $parser->makeHtml(\Storage::disk('articles')->get($local_path));
     return response()->json($article);
+});
+
+
+Route::group(['namespace' => 'back_api'], function () {
+    Route::post('/adminlogin', 'AdminController@login');
+});
+
+Route::group(['prefix' => 'cart', 'middleware' => ['client.credentials']], function () {
+    return false;
 });

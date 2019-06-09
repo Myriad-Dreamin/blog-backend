@@ -63,6 +63,7 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+        dd("you can't register!");
         return User::create([
             'name' => $data['name'],
             'email' => $data['email'],

@@ -1,3 +1,2 @@
-# blog
-laravel blog
-power by Myriad-Dreamin!
+# minimum-template
+gin extension

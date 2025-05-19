@@ -3,16 +3,20 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
-target/blog-srv: cmd/blog-srv/main.go $(wildcard pkg/dto/*.go)
+
+DockerfilePath ?= deployment/docker/Dockerfile
+ServicePath ?= deployment/docker/docker-compose.yaml
+
+target/blog-srv: $(wildcard cmd/blog-srv/*.go) $(wildcard pkg/dto/*.go)
 	@echo "Building blog-srv..."
 	@mkdir -p target
-	@go build -o target/blog-srv cmd/blog-srv/main.go
+	@go build -buildvcs -o target/blog-srv ./cmd/blog-srv/
 	@echo "Build complete."
 
-target/blog-cli: cmd/blog-cli/main.go $(wildcard pkg/dto/*.go)
+target/blog-cli: $(wildcard cmd/blog-cli/*.go) $(wildcard pkg/dto/*.go)
 	@echo "Building blog-cli..."
 	@mkdir -p target
-	@go build -o target/blog-cli cmd/blog-cli/main.go
+	@go build -buildvcs -o target/blog-cli ./cmd/blog-cli/
 	@echo "Build complete."
 
 upload-data: .data/articles.json
@@ -23,7 +27,7 @@ upload-data: .data/articles.json
 
 download-data:
 	@echo "Downloading data from server..."
-	@ssh $(SERVER_NAME) "cd $(BLOG_PATH) && target/blog-cli"
+	@ssh $(SERVER_NAME) "cd $(BLOG_PATH) && target/blog-cli click"
 	@scp $(SERVER_NAME):$(BLOG_PATH)/.data/article-clicks.json .data
 	@cp .data/article-clicks.json $(BLOG_FRONTEND_PATH)/assets/article-clicks.json
 	@echo "Downloading data complete."
@@ -34,7 +38,18 @@ upload: target/blog-srv target/blog-cli
 	@scp $^ $(SERVER_NAME):$(BLOG_PATH)/target/
 	@echo "Upload complete."
 
+deploy: upload
+	@echo "Deploying to server..."
+	@scp $(DockerfilePath) $(ServicePath) $(SERVER_NAME):$(BLOG_PATH) && \
+	  ssh $(SERVER_NAME) "cd $(BLOG_PATH) && docker build -t blog-srv . && \
+	  docker-compose down && docker-compose up -d"
+	@echo "Deployment complete."
+
+logs:
+	@echo "Fetching logs from server..."
+	@ssh $(SERVER_NAME) "cd $(BLOG_PATH) && docker-compose logs -f" || true
+
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BLOG_PATH) && bash" || true
 
-.PHONY: all clean upload-data upload login
+.PHONY: all clean upload-data upload login deploy

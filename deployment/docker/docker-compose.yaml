@@ -1,0 +1,10 @@
+services:
+  app:
+    image: blog-srv:latest
+    container_name: blog-srv
+    restart: unless-stopped
+    ports:
+      - "13333:13333"
+    volumes:
+      - ./.data:/app/.data
+    working_dir: /app

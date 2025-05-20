@@ -19,6 +19,12 @@ target/blog-cli: $(wildcard cmd/blog-cli/*.go) $(wildcard pkg/dto/*.go)
 	@go build -buildvcs -o target/blog-cli ./cmd/blog-cli/
 	@echo "Build complete."
 
+.data/articles.json: $(BLOG_FRONTEND_PATH)/dist/articles.json
+	@echo "Copying articles.json..."
+	@mkdir -p .data
+	@cp $< $@
+	@echo "Copy complete."
+
 upload-data: .data/articles.json
 	@echo "Uploading data to server..."
 	@ssh $(SERVER_NAME) "mkdir -p $(BLOG_PATH)/.data"

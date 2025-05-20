@@ -27,9 +27,10 @@ upload-data: .data/articles.json
 
 download-data:
 	@echo "Downloading data from server..."
-	@ssh $(SERVER_NAME) "cd $(BLOG_PATH) && target/blog-cli click"
-	@scp $(SERVER_NAME):$(BLOG_PATH)/.data/article-clicks.json .data
-	@cp .data/article-clicks.json $(BLOG_FRONTEND_PATH)/assets/article-clicks.json
+	@ssh $(SERVER_NAME) "cd $(BLOG_PATH) && target/blog-cli click && target/blog-cli comment"
+	@scp $(SERVER_NAME):$(BLOG_PATH)/.data/article-clicks.json $(SERVER_NAME):$(BLOG_PATH)/.data/article-comments.json .data
+	@cp .data/article-clicks.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-clicks.json
+	@cp .data/article-comments.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-comments.json
 	@echo "Downloading data complete."
 
 upload: target/blog-srv target/blog-cli

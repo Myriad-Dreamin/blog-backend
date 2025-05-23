@@ -8,7 +8,7 @@ import (
 )
 
 func WriteJsonToFile(filePath string, data interface{}) error {
-	file, err := os.Create(filePath)
+	file, err := os.Create(filePath + ".tmp")
 	if err != nil {
 		return errors.Wrap(err, "error create file")
 	}
@@ -19,5 +19,5 @@ func WriteJsonToFile(filePath string, data interface{}) error {
 		return errors.Wrap(err, "error encode data")
 	}
 
-	return nil
+	return os.Rename(filePath+".tmp", filePath)
 }

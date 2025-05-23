@@ -64,7 +64,7 @@ func (h *Handler) tickSnapshot() {
 func (h *Handler) writeSnapshot() {
 	// export clicks to `.data/article-clicks.json`
 	{
-		clicks, err := dto.GetClicks(h.db)
+		clicks, err := sqlite.GetClicks(h.db)
 		if err != nil {
 			log.Printf("error get clicks: %s\n", err)
 		}
@@ -78,7 +78,7 @@ func (h *Handler) writeSnapshot() {
 	}
 	// export comments to `.data/article-comments.json`
 	{
-		comments, err := dto.GetComments(h.db)
+		comments, err := sqlite.GetComments(h.db)
 		if err != nil {
 			log.Printf("error get clicks: %s\n", err)
 

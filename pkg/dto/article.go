@@ -24,3 +24,16 @@ func GetArticles() ([]Article, error) {
 type Article struct {
 	Id string `json:"id"`
 }
+
+type ArticleClick struct {
+	Id    string `json:"id"`
+	Click int    `json:"click"`
+}
+
+type ArticleComment struct {
+	Id        string `json:"id"`
+	ArticleId string `json:"articleId"`
+	Content   string `json:"content"`
+	Email     string `json:"email"`
+	CreatedAt int64  `json:"createdAt"`
+}

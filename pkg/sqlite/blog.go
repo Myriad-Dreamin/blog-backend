@@ -1,7 +1,6 @@
 package sqlite
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -9,8 +8,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/Myriad-Dreamin/blog-backend/pkg/dto"
 	"github.com/Myriad-Dreamin/blog-backend/pkg/iou"
-	"github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
 
@@ -72,48 +71,48 @@ func BackupBlog(src *sql.DB) error {
 	return nil
 }
 
-func Backup(destDb, srcDb *sql.DB) error {
-	destConn, err := destDb.Conn(context.Background())
+func GetClicks(db *sql.DB) ([]dto.ArticleClick, error) {
+	rows, err := db.Query("SELECT id, click FROM articles")
+
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	srcConn, err := srcDb.Conn(context.Background())
+	defer rows.Close()
+
+	var clicks []dto.ArticleClick
+	for rows.Next() {
+		var click dto.ArticleClick
+		if err := rows.Scan(&click.Id, &click.Click); err != nil {
+			return nil, err
+		}
+		clicks = append(clicks, click)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return clicks, nil
+}
+
+func GetComments(db *sql.DB) ([]dto.ArticleComment, error) {
+	rows, err := db.Query("SELECT id, article_id, content, email, created_at FROM comments")
+
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return destConn.Raw(func(destConn interface{}) error {
-		return srcConn.Raw(func(srcConn interface{}) error {
-			destSQLiteConn, ok := destConn.(*sqlite3.SQLiteConn)
-			if !ok {
-				return fmt.Errorf("can't convert destination connection to SQLiteConn")
-			}
+	defer rows.Close()
 
-			srcSQLiteConn, ok := srcConn.(*sqlite3.SQLiteConn)
-			if !ok {
-				return fmt.Errorf("can't convert source connection to SQLiteConn")
-			}
-
-			b, err := destSQLiteConn.Backup("main", srcSQLiteConn, "main")
-			if err != nil {
-				return fmt.Errorf("error initializing SQLite backup: %w", err)
-			}
-
-			done, err := b.Step(-1)
-			if !done {
-				return fmt.Errorf("step of -1, but not done")
-			}
-			if err != nil {
-				return fmt.Errorf("error in stepping backup: %w", err)
-			}
-
-			err = b.Finish()
-			if err != nil {
-				return fmt.Errorf("error finishing backup: %w", err)
-			}
-
-			return err
-		})
-	})
+	var comments []dto.ArticleComment
+	for rows.Next() {
+		var comment dto.ArticleComment
+		if err := rows.Scan(&comment.Id, &comment.ArticleId, &comment.Content, &comment.Email, &comment.CreatedAt); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return comments, nil
 }

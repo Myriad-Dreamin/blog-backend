@@ -4,8 +4,8 @@ ifneq (,$(wildcard ./.env))
 endif
 
 
-DockerfilePath ?= deployment/docker/Dockerfile
-ServicePath ?= deployment/docker/docker-compose.yaml
+ServerDockerfilePath ?= deployment/server/Dockerfile
+ServerServicePath ?= deployment/server/docker-compose.yaml
 
 target/blog-srv: $(wildcard cmd/blog-srv/*.go) $(wildcard pkg/dto/*.go)
 	@echo "Building blog-srv..."
@@ -18,6 +18,9 @@ target/blog-cli: $(wildcard cmd/blog-cli/*.go) $(wildcard pkg/dto/*.go)
 	@mkdir -p target
 	@go build -buildvcs -o target/blog-cli ./cmd/blog-cli/
 	@echo "Build complete."
+
+$(BLOG_FRONTEND_PATH)/dist/articles.json: $(wildcard $(BLOG_FRONTEND_PATH)/content/article/*.typ)
+	cd $(BLOG_FRONTEND_PATH) && pnpm build
 
 .data/articles.json: $(BLOG_FRONTEND_PATH)/dist/articles.json
 	@echo "Copying articles.json..."
@@ -33,11 +36,13 @@ upload-data: .data/articles.json
 
 download-data:
 	@echo "Downloading data from server..."
-	@ssh $(SERVER_NAME) "cd $(BLOG_PATH) && target/blog-cli click && target/blog-cli comment"
 	@scp $(SERVER_NAME):$(BLOG_PATH)/.data/article-clicks.json $(SERVER_NAME):$(BLOG_PATH)/.data/article-comments.json .data
 	@cp .data/article-clicks.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-clicks.json
 	@cp .data/article-comments.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-comments.json
 	@echo "Downloading data complete."
+
+sync: upload-data download-data
+	@echo "Sync complete."
 
 upload: target/blog-srv target/blog-cli
 	@echo "Uploading to server..."
@@ -47,7 +52,7 @@ upload: target/blog-srv target/blog-cli
 
 deploy: upload
 	@echo "Deploying to server..."
-	@scp $(DockerfilePath) $(ServicePath) $(SERVER_NAME):$(BLOG_PATH) && \
+	@scp $(ServerDockerfilePath) $(ServerServicePath) $(SERVER_NAME):$(BLOG_PATH) && \
 	  ssh $(SERVER_NAME) "cd $(BLOG_PATH) && docker build -t blog-srv . && \
 	  docker-compose down && docker-compose up -d"
 	@echo "Deployment complete."
@@ -59,4 +64,4 @@ logs:
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BLOG_PATH) && bash" || true
 
-.PHONY: all clean upload-data upload login deploy
+.PHONY: all clean sync download-data upload login deploy

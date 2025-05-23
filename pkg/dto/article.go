@@ -5,10 +5,6 @@ import (
 	"os"
 )
 
-type Article struct {
-	Id string `json:"id"`
-}
-
 func GetArticles() ([]Article, error) {
 	var articles []Article
 
@@ -23,4 +19,8 @@ func GetArticles() ([]Article, error) {
 		return nil, err
 	}
 	return articles, nil
+}
+
+type Article struct {
+	Id string `json:"id"`
 }

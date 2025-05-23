@@ -37,6 +37,7 @@ func main() {
 	}
 
 	go h.watchArticles()
+	go h.tickSnapshot()
 	go backup(db)
 
 	mux := http.NewServeMux()

@@ -68,6 +68,8 @@ func (h *Handler) handleClickPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var remoteAddr = r.RemoteAddr
+
 	var article dto.Article
 	err := json.NewDecoder(r.Body).Decode(&article)
 	if err != nil {
@@ -113,5 +115,5 @@ func (h *Handler) handleClickPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log the click
-	log.Printf("Article clicked: %s\n", article.Id)
+	log.Printf("Article clicked: %s, from %s\n", article.Id, remoteAddr)
 }

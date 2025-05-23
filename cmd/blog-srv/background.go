@@ -3,9 +3,11 @@ package main
 import (
 	"database/sql"
 	"log"
+	"net/mail"
 	"time"
 
 	"github.com/Myriad-Dreamin/blog-backend/pkg/dto"
+	"github.com/Myriad-Dreamin/blog-backend/pkg/iou"
 	"github.com/Myriad-Dreamin/blog-backend/pkg/sqlite"
 	"github.com/fsnotify/fsnotify"
 )
@@ -42,6 +44,73 @@ func (h *Handler) watchArticles() {
 			log.Printf("error: %s\n", err)
 		}
 	}
+}
+
+func (h *Handler) tickSnapshot() {
+	// periodly snapshot
+	// every day
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	log.Printf("Snapshot...\n")
+	h.writeSnapshot()
+
+	for range ticker.C {
+		log.Printf("Snapshot...\n")
+		h.writeSnapshot()
+	}
+}
+
+func (h *Handler) writeSnapshot() {
+	// export clicks to `.data/article-clicks.json`
+	{
+		clicks, err := dto.GetClicks(h.db)
+		if err != nil {
+			log.Printf("error get clicks: %s\n", err)
+		}
+		log.Printf("write clicks: %v\n", len(clicks))
+
+		// write clicks to file
+		err = iou.WriteJsonToFile("./.data/article-clicks.json", clicks)
+		if err != nil {
+			log.Printf("error write build info to file: %s\n", err)
+		}
+	}
+	// export comments to `.data/article-comments.json`
+	{
+		comments, err := dto.GetComments(h.db)
+		if err != nil {
+			log.Printf("error get clicks: %s\n", err)
+
+		}
+		log.Printf("write comments: %v\n", len(comments))
+
+		// write clicks to file
+		err = iou.WriteJsonToFile("./.data/article-email-comments.json", comments)
+		if err != nil {
+			log.Printf("error write build info to file: %s\n", err)
+		}
+
+		var withEmail = false
+		if !withEmail {
+			for i := range comments {
+				addr, err := mail.ParseAddress(comments[i].Email)
+				if err != nil {
+					comments[i].Email = ""
+				}
+				comments[i].Email = addr.Name
+			}
+		}
+
+		// write clicks to file
+		err = iou.WriteJsonToFile("./.data/article-comments.json", comments)
+		if err != nil {
+			log.Printf("error write build info to file: %s\n", err)
+		}
+	}
+
+	// 	@cp .data/article-clicks.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-clicks.json
+	// 	@cp .data/article-comments.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-comments.json
 }
 
 func (h *Handler) createTables() {

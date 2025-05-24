@@ -82,14 +82,8 @@ func (h *Handler) handleClickPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Check if article exists in database
-	var exists bool
-	err = h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM articles WHERE id=?)", article.Id).Scan(&exists)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	if !exists {
-		http.Error(w, "Not found", http.StatusNotFound)
+	if !h.mustExistsArticle(article.Id, w) {
+		http.Error(w, "Article not found", http.StatusNotFound)
 		return
 	}
 	// Increment click count

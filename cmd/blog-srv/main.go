@@ -9,7 +9,6 @@ import (
 
 	"database/sql"
 
-	"github.com/Myriad-Dreamin/blog-backend/pkg/dto"
 	"github.com/rs/cors"
 	"golang.org/x/time/rate"
 
@@ -62,10 +61,25 @@ func main() {
 }
 
 type Handler struct {
-	db       *sql.DB
-	articles []dto.Article
+	db *sql.DB
 
 	commentLim *rate.Limiter
+}
+
+// Checks if article exists in database
+func (h *Handler) mustExistsArticle(id string, w http.ResponseWriter) bool {
+	var exists bool
+	err := h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM articles WHERE id=?)", id).Scan(&exists)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return false
+	}
+	if !exists {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return false
+	}
+
+	return true
 }
 
 func checkErr(err error) {

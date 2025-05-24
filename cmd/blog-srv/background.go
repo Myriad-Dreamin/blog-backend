@@ -141,7 +141,6 @@ func (h *Handler) createArticles(articles []dto.Article) {
 	}
 
 	log.Printf("Articles loaded: %d\n", len(articles))
-	h.articles = articles
 }
 
 func (h *Handler) createComments() {

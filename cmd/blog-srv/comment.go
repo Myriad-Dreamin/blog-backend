@@ -31,6 +31,17 @@ func (h *Handler) handleCommentPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty articleId", http.StatusBadRequest)
 		return
 	}
+	var found = false
+	for art := range h.articles {
+		if h.articles[art].Id == articleId {
+			found = true
+			break
+		}
+	}
+	if !found {
+		http.Error(w, "Article not found", http.StatusBadRequest)
+		return
+	}
 
 	// Get comment from form data
 	content := r.FormValue("content")

@@ -9,6 +9,7 @@ import (
 
 	"database/sql"
 
+	"github.com/Myriad-Dreamin/blog-backend/pkg/dto"
 	"github.com/rs/cors"
 	"golang.org/x/time/rate"
 
@@ -61,7 +62,8 @@ func main() {
 }
 
 type Handler struct {
-	db *sql.DB
+	db       *sql.DB
+	articles []dto.Article
 
 	commentLim *rate.Limiter
 }

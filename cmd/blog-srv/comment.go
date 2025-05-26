@@ -11,13 +11,9 @@ func (h *Handler) handleComment(w http.ResponseWriter, r *http.Request) {
 	// post or get
 	switch r.Method {
 	case http.MethodPost:
-		// rate limit
-		remaining := h.reactionLim.Reserve()
-		if !remaining.OK() {
-			w.WriteHeader(http.StatusTooManyRequests)
-			return
+		if h.rateLimit(w) {
+			h.handleCommentPost(w, r)
 		}
-		h.handleCommentPost(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

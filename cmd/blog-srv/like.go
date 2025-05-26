@@ -24,13 +24,9 @@ func (h *Handler) handleLike(w http.ResponseWriter, r *http.Request, isPost bool
 	case http.MethodGet:
 		h.handleLikeGet(w, r)
 	case http.MethodPost:
-		// rate limit
-		remaining := h.reactionLim.Reserve()
-		if !remaining.OK() {
-			w.WriteHeader(http.StatusTooManyRequests)
-			return
+		if h.rateLimit(w) {
+			h.handleLikePost(w, r, isPost)
 		}
-		h.handleLikePost(w, r, isPost)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

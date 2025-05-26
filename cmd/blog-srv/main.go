@@ -33,8 +33,8 @@ func main() {
 	defer db.Close()
 
 	var h = &Handler{
-		db:          db,
-		reactionLim: rate.NewLimiter(rate.Every(1), 1),
+		db:      db,
+		rateLim: rate.NewLimiter(rate.Every(1), 100),
 	}
 
 	go h.watchArticles()
@@ -68,7 +68,7 @@ func main() {
 type Handler struct {
 	db *sql.DB
 
-	reactionLim *rate.Limiter
+	rateLim *rate.Limiter
 }
 
 // Checks if article exists in database
@@ -85,6 +85,18 @@ func (h *Handler) mustExistsArticle(id string, w http.ResponseWriter) bool {
 	}
 
 	return true
+}
+
+func (h *Handler) rateLimit(w http.ResponseWriter) bool {
+	// rate limit
+	remaining := h.rateLim.Reserve()
+	if remaining.OK() {
+		return true
+	}
+
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.WriteHeader(http.StatusTooManyRequests)
+	return false
 }
 
 func (h *Handler) jsonGet(w http.ResponseWriter, r *http.Request, getter func() (any, error)) {

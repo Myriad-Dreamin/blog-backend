@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -46,6 +47,8 @@ func main() {
 	mux.HandleFunc("/article/comment", h.handleComment)
 	mux.HandleFunc("/article/like", UnlikeHandler{h, true}.handleLike)
 	mux.HandleFunc("/article/like/delete", UnlikeHandler{h, false}.handleLike)
+	mux.HandleFunc("/snapshot/stats", h.handleSnapshotStats)
+	mux.HandleFunc("/snapshot/comments", h.handleSnapshotComments)
 
 	corsCfg := cors.New(cors.Options{
 		AllowedHeaders: []string{"accept", "content-type", "x-requested-with", "referrer-policy"},
@@ -82,6 +85,26 @@ func (h *Handler) mustExistsArticle(id string, w http.ResponseWriter) bool {
 	}
 
 	return true
+}
+
+func (h *Handler) jsonGet(w http.ResponseWriter, r *http.Request, getter func() (any, error)) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	stats, err := getter()
+	if err != nil {
+		log.Printf("error get stats: %s\n", err)
+	}
+
+	// Return click count as JSON
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(stats); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func checkErr(err error) {

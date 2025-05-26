@@ -62,16 +62,16 @@ func (h *Handler) tickSnapshot() {
 }
 
 func (h *Handler) writeSnapshot() {
-	// export clicks to `.data/article-clicks.json`
+	// export stats to `.data/article-stats.json`
 	{
-		clicks, err := sqlite.GetClicks(h.db)
+		stats, err := sqlite.GetStats(h.db)
 		if err != nil {
-			log.Printf("error get clicks: %s\n", err)
+			log.Printf("error get stats: %s\n", err)
 		}
-		log.Printf("write clicks: %v\n", len(clicks))
+		log.Printf("write stats: %v\n", len(stats))
 
-		// write clicks to file
-		err = iou.WriteJsonToFile("./.data/article-clicks.json", clicks)
+		// write stats to file
+		err = iou.WriteJsonToFile("./.data/article-stats.json", stats)
 		if err != nil {
 			log.Printf("error write build info to file: %s\n", err)
 		}
@@ -80,12 +80,12 @@ func (h *Handler) writeSnapshot() {
 	{
 		comments, err := sqlite.GetComments(h.db)
 		if err != nil {
-			log.Printf("error get clicks: %s\n", err)
+			log.Printf("error get comments: %s\n", err)
 
 		}
 		log.Printf("write comments: %v\n", len(comments))
 
-		// write clicks to file
+		// write comments to file
 		err = iou.WriteJsonToFile("./.data/article-email-comments.json", comments)
 		if err != nil {
 			log.Printf("error write build info to file: %s\n", err)
@@ -102,14 +102,14 @@ func (h *Handler) writeSnapshot() {
 			}
 		}
 
-		// write clicks to file
+		// write comments to file
 		err = iou.WriteJsonToFile("./.data/article-comments.json", comments)
 		if err != nil {
 			log.Printf("error write build info to file: %s\n", err)
 		}
 	}
 
-	// 	@cp .data/article-clicks.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-clicks.json
+	// 	@cp .data/article-stats.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-stats.json
 	// 	@cp .data/article-comments.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-comments.json
 }
 
@@ -122,6 +122,7 @@ func (h *Handler) createTables() {
 
 	h.createArticles(articles)
 	h.createComments()
+	h.createLikes()
 }
 
 func (h *Handler) createArticles(articles []dto.Article) {
@@ -152,6 +153,21 @@ func (h *Handler) createComments() {
 	}
 	// Create index if not exists
 	_, err = h.db.Exec("CREATE INDEX IF NOT EXISTS idx_article_id ON comments (article_id)")
+	if err != nil {
+		log.Printf("error creating index: %s\n", err)
+		return
+	}
+}
+
+func (h *Handler) createLikes() {
+	// Create table if not exists
+	_, err := h.db.Exec("CREATE TABLE IF NOT EXISTS likes (article_id TEXT, email TEXT)")
+	if err != nil {
+		log.Printf("error creating table: %s\n", err)
+		return
+	}
+	// Create index if not exists
+	_, err = h.db.Exec("CREATE INDEX IF NOT EXISTS idx_article_id ON likes (article_id)")
 	if err != nil {
 		log.Printf("error creating index: %s\n", err)
 		return

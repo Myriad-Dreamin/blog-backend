@@ -71,8 +71,8 @@ func BackupBlog(src *sql.DB) error {
 	return nil
 }
 
-func GetClicks(db *sql.DB) ([]dto.ArticleClick, error) {
-	rows, err := db.Query("SELECT id, click FROM articles")
+func GetStats(db *sql.DB) ([]dto.ArticleStat, error) {
+	rows, err := db.Query("SELECT id, click, COALESCE(like, 0) FROM articles LEFT JOIN (SELECT article_id, COUNT(*) AS like FROM likes GROUP BY article_id) AS like_stats ON articles.id = like_stats.article_id")
 
 	if err != nil {
 		return nil, err
@@ -80,10 +80,10 @@ func GetClicks(db *sql.DB) ([]dto.ArticleClick, error) {
 
 	defer rows.Close()
 
-	var clicks []dto.ArticleClick
+	var clicks []dto.ArticleStat
 	for rows.Next() {
-		var click dto.ArticleClick
-		if err := rows.Scan(&click.Id, &click.Click); err != nil {
+		var click dto.ArticleStat
+		if err := rows.Scan(&click.Id, &click.Click, &click.Like); err != nil {
 			return nil, err
 		}
 		clicks = append(clicks, click)

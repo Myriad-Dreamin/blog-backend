@@ -32,8 +32,8 @@ func main() {
 	defer db.Close()
 
 	var h = &Handler{
-		db:         db,
-		commentLim: rate.NewLimiter(rate.Every(1), 1),
+		db:          db,
+		reactionLim: rate.NewLimiter(rate.Every(1), 1),
 	}
 
 	go h.watchArticles()
@@ -44,6 +44,8 @@ func main() {
 
 	mux.HandleFunc("/article/click", h.handleClick)
 	mux.HandleFunc("/article/comment", h.handleComment)
+	mux.HandleFunc("/article/like", UnlikeHandler{h, true}.handleLike)
+	mux.HandleFunc("/article/like/delete", UnlikeHandler{h, false}.handleLike)
 
 	corsCfg := cors.New(cors.Options{
 		AllowedHeaders: []string{"accept", "content-type", "x-requested-with", "referrer-policy"},
@@ -63,7 +65,7 @@ func main() {
 type Handler struct {
 	db *sql.DB
 
-	commentLim *rate.Limiter
+	reactionLim *rate.Limiter
 }
 
 // Checks if article exists in database

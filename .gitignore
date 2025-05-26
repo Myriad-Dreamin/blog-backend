@@ -16,4 +16,5 @@ npm-debug.log
 yarn-error.log
 .vscode/sftp.json
 .data
+data
 target

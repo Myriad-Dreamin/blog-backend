@@ -25,9 +25,10 @@ type Article struct {
 	Id string `json:"id"`
 }
 
-type ArticleClick struct {
+type ArticleStat struct {
 	Id    string `json:"id"`
 	Click int    `json:"click"`
+	Like  int    `json:"like"`
 }
 
 type ArticleComment struct {

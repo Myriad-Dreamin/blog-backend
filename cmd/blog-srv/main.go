@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"database/sql"
 
@@ -34,7 +35,7 @@ func main() {
 
 	var h = &Handler{
 		db:      db,
-		rateLim: rate.NewLimiter(rate.Every(1), 100),
+		rateLim: rate.NewLimiter(rate.Every(time.Second), 10),
 	}
 
 	go h.watchArticles()
@@ -89,8 +90,8 @@ func (h *Handler) mustExistsArticle(id string, w http.ResponseWriter) bool {
 
 func (h *Handler) rateLimit(w http.ResponseWriter) bool {
 	// rate limit
-	remaining := h.rateLim.Reserve()
-	if remaining.OK() {
+	allowed := h.rateLim.Allow()
+	if allowed {
 		return true
 	}
 

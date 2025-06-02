@@ -9,6 +9,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/pkg/errors v0.9.1
 	github.com/rs/cors v1.11.1
+	github.com/sethvargo/go-limiter v1.0.0
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/time v0.11.0
 )

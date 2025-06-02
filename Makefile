@@ -19,6 +19,11 @@ target/blog-cli: $(wildcard cmd/blog-cli/*.go) $(shell find pkg/ -type f -name '
 	@go build -buildvcs -o target/blog-cli ./cmd/blog-cli/
 	@echo "Build complete."
 
+target/blog-http: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
+	CGO_ENABLED=0 go build -tags netgo -o target/blog-http ./cmd/blog-http
+
+upload-http: target/blog-http
+	scp target/blog-http $(FRONTEND_SERVER):~
 
 jl: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
 	rsync -vr $(FRONTEND_SERVER):~/www/caddy/log/ packages/jl/.data/log/
@@ -69,4 +74,4 @@ logs:
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BLOG_PATH) && bash" || true
 
-.PHONY: all clean sync download-data upload login deploy
+.PHONY: all clean sync download-data upload login deploy jl

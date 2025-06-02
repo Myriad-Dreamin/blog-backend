@@ -1,0 +1,121 @@
+---
+export interface LogLine {
+  source: string;
+  level: string;
+  ts: number;
+  logger: string;
+  msg: string;
+  request: {
+    remote_ip: string;
+    remote_port: string;
+    client_ip: string;
+    proto: string;
+    method: string;
+    host: string;
+    uri: string;
+    headers: Record<string, string[]>;
+    tls: {
+      resumed: boolean;
+      version: number;
+      cipher_suite: number;
+      proto: string;
+      server_name: string;
+    };
+  };
+  bytes_read: number;
+  user_id: string;
+  duration: number;
+  size: number;
+  status: number;
+  resp_headers: Record<string, string[]>;
+}
+export interface Props {
+  line: LogLine;
+}
+
+const { line }: Props = Astro.props;
+---
+
+<style>
+  .json-line {
+    font-family: sans-serif;
+  }
+  .heading.level-info {
+    color: green;
+  }
+  .url {
+    color: #29b7cb;
+  }
+  .header-key {
+    font-weight: bold;
+  }
+  .header-value {
+    color: #f0a500;
+  }
+  .source {
+    color: #ff6f61;
+  }
+  .json-line-section {
+    margin: 0.5em 0;
+  }
+
+  .json-line:hover .hover-show {
+    max-height: 500px;
+  }
+  .hover-show {
+    transition: max-height 0.5s ease-in-out;
+    max-height: 0;
+    overflow: hidden;
+  }
+</style>
+<div class="json-line">
+  <div class="json-line-section">
+    <!-- url method -->
+    <span class="proto">{line.request.proto}</span>
+    <span class="url">{JSON.stringify(line.request.uri)}</span><span
+      class="method">@{line.request.method}</span
+    >
+    <span class={`heading level-${line.level}`}>
+      <!-- <span class="logger">{line.logger}</span> -->
+      <span class="status">Status: {line.status}</span>
+      <span class="ts">{new Date(line.ts * 1000).toISOString()}</span>
+      <span class="msg">{line.msg}</span>
+    </span>
+    <span class="duration">in {(line.duration * 1000).toFixed(1)}s</span>
+    from <span class="source">{line.source}</span>
+    <!-- remote addr -->
+    <span
+      >{
+        `${line.request.remote_ip}:${line.request.remote_port}` +
+          (line.request.remote_ip === line.request.client_ip
+            ? ""
+            : ` (${line.request.client_ip})`)
+      }</span
+    >
+  </div>
+  <!-- User Agent -->
+  <div class="json-line-section">
+    <strong class="header-key">User Agent: </strong><code class="header-value"
+      >{`${(line.request.headers["User-Agent"] || []).join(", ")}`}</code
+    >
+  </div>
+  <!-- Accept/Accept-Encoding -->
+  <div class="json-line-section">
+    <strong class="header-key">Accept-Encoding: </strong><code
+      class="header-value"
+      >{`${(line.request.headers["Accept-Encoding"] || []).join(", ")}`}</code
+    >
+    <strong class="header-key">Accept: </strong><code class="header-value"
+      >{`${(line.request.headers.Accept || []).join(", ")}`}</code
+    >
+  </div>
+  <div class="json-line-section hover-show">
+    <span class="bytes_read">Bytes Read: {line.bytes_read}</span>
+    <span class="user_id">User ID: {line.user_id}</span>
+    <span class="size">Size: {line.size} bytes</span>
+  </div>
+  <!-- <div class="response">
+    <strong>Response:</strong>
+    <pre>{JSON.stringify(line.resp_headers, null, 2)}</pre>
+  </div> -->
+</div>

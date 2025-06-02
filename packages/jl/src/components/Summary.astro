@@ -1,0 +1,102 @@
+---
+import D3Chart from "./D3Chart.astro";
+import type { LogLine } from "./JsonLine.astro";
+
+export interface Summary {
+  source: string;
+  accessCount: number;
+  lastAccess: number;
+  distributionLastDay?: [number, number][];
+  distributionLastMonth?: [number, number][];
+}
+
+export interface Props {
+  summary: Summary[];
+}
+
+export function makeSummary(
+  domains: string[],
+  jsonFiles: LogLine[][]
+): Summary[] {
+  const summaryList: Summary[] = [];
+  jsonFiles.forEach((file, index) => {
+    const fileSummary: Summary = {
+      source: domains[index],
+      accessCount: file.length,
+      lastAccess: file[0]?.ts || 0,
+      distributionLastDay: calculateDistribution(file, "day"), // last 48 hours
+      distributionLastMonth: calculateDistribution(file, "month"), // last 1 month
+    };
+    summaryList.push(fileSummary);
+  });
+  return summaryList;
+  function calculateDistribution(
+    file: LogLine[],
+    period: "day" | "month"
+  ): [number, number][] {
+    const distribution: Record<string, number> = {};
+    const now = Date.now() / 1000; // current time in seconds
+
+    // if day it is bucketed by hour/minutes, if month it is bucketed by day
+    const bucketSize = period === "day" ? 60 * 5 : 86400; // 1 hour or 1 day in seconds
+    const startTime = now - (period === "day" ? 48 * 3600 : 30 * 86400); // last 48 hours or last month
+    const endTime = now;
+    file.forEach((line) => {
+      if (line.ts >= startTime && line.ts <= endTime) {
+        const bucket = Math.floor(line.ts / bucketSize) * bucketSize;
+        distribution[bucket] = (distribution[bucket] || 0) + 1;
+      }
+    });
+    // Convert distribution to an array of [timestamp, count] pairs
+    const distributionArray: [number, number][] = Object.entries(distribution)
+      .map(([key, value]) => [parseInt(key, 10), value] as [number, number])
+      .sort((a, b) => a[0] - b[0]); // Sort by timestamp
+    return distributionArray;
+  }
+}
+
+const { summary }: Props = Astro.props;
+---
+
+<style>
+  .summary-item {
+    margin: 0.5em 0;
+    padding: 0.5em;
+  }
+  .summary-item h3 {
+    margin: 0;
+    font-size: 1.2em;
+    color: #ff6f61;
+  }
+  .summary-item .kv {
+    margin: 0.5em 1em;
+    font-size: 0.9em;
+  }
+</style>
+<div class="summary">
+  {
+    summary.map((item) => (
+      <div class="summary-item">
+        <h3>{item.source}</h3>
+        <p class="kv">Access Count: {item.accessCount}</p>
+        <p class="kv">
+          Last Access: {new Date(item.lastAccess * 1000).toISOString()}
+        </p>
+        {item.distributionLastDay && (
+          <D3Chart
+            data={item.distributionLastDay}
+            title="Access Distribution Last 48 Hours"
+            period="day"
+          />
+        )}
+        {item.distributionLastMonth && (
+          <D3Chart
+            data={item.distributionLastMonth}
+            title="Access Distribution Last Month"
+            period="month"
+          />
+        )}
+      </div>
+    ))
+  }
+</div>

@@ -19,6 +19,11 @@ target/blog-cli: $(wildcard cmd/blog-cli/*.go) $(shell find pkg/ -type f -name '
 	@go build -buildvcs -o target/blog-cli ./cmd/blog-cli/
 	@echo "Build complete."
 
+
+jl: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
+	rsync -vr $(FRONTEND_SERVER):~/www/caddy/log/ packages/jl/.data/log/
+	cd packages/jl && pnpm dev --port 11465
+
 $(BLOG_FRONTEND_PATH)/dist/articles.json: $(wildcard $(BLOG_FRONTEND_PATH)/content/article/*.typ)
 	cd $(BLOG_FRONTEND_PATH) && pnpm build
 

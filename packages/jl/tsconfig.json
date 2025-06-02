@@ -1,0 +1,9 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "types": ["src/global.d.ts"],
+    "typeRoots": ["."]
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}

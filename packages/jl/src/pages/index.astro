@@ -1,0 +1,75 @@
+---
+import * as fs from "node:fs/promises";
+import { join } from "node:path";
+import JsonLine, { type LogLine } from "../components/JsonLine.astro";
+import Summary, { makeSummary } from "../components/Summary.astro";
+
+const domains = [
+  "cn.myriad-dreamin.com",
+  "i.myriad-dreamin.com",
+  "orange.myriad-dreamin.com",
+];
+
+const readJsonl = (domain: string) =>
+  fs
+    .readFile(
+      join(import.meta.dirname, `../../.data/log/${domain}.jsonl`),
+      "utf-8"
+    )
+    .then((data) =>
+      data
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => {
+          const res = JSON.parse(line) as LogLine;
+          res.source = domain;
+          return res;
+        })
+    );
+// .sort((a: LogLine, b: LogLine) => b.ts - a.ts)
+
+const jsonFiles = (await Promise.all(domains.map(readJsonl))).map((file) =>
+  file.sort((a, b) => b.ts - a.ts)
+);
+
+const summary = makeSummary(domains, jsonFiles);
+const jsonl = jsonFiles.flat().sort((a, b) => b.ts - a.ts);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Astro</title>
+    <style is:global>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      /* dark */
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+        margin: 2em;
+      }
+      .json-line {
+        margin: 0.5em 0;
+        padding: 0.5em;
+        border: 1px solid white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Caddy Stats</h1>
+    <h2>Summary</h2>
+    <h2>Log</h2>
+    <Summary summary={summary} />
+    <!-- format as div list -->
+    <div>
+      {jsonl.map((line) => <JsonLine line={line} />)}
+    </div>
+  </body>
+</html>

@@ -1,0 +1,159 @@
+---
+export interface Props {
+  data: [/*ts*/ number, /*count*/ number][];
+  title: string;
+  period: "day" | "month";
+}
+
+const { data, title, period }: Props = Astro.props;
+---
+
+<script src="https://d3js.org/d3.v6.js"></script>
+<style is:global>
+  .d3-chart {
+    margin: 4em;
+  }
+  .d3-chart-svg {
+    overflow: visible;
+  }
+</style>
+<div class="d3-chart">
+  <script define:vars={{ data, title, period }}>
+    const parent = document.currentScript.parentElement;
+    console.log("D3 Chart Data:", data);
+    document.addEventListener("DOMContentLoaded", function () {
+      const width = parent.clientWidth;
+      const height = 300;
+
+      const d3 = window.d3;
+
+      const svg = d3
+        .select(parent)
+        .append("svg")
+        .attr("class", "d3-chart-svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("viewBox", `0 0 ${width} ${height}`);
+
+      const xLeft = Math.min(...data.map((d) => d[0]));
+      const xRight = Math.max(...data.map((d) => d[0]));
+      console.log("X Scale Range:", xLeft, xRight);
+      const xScale = d3
+        .scaleTime()
+        .domain([new Date(xLeft * 1000), new Date(xRight * 1000)])
+        .range([0, width]);
+      const yScale = d3
+        .scaleLinear()
+        .domain([0, d3.max(data, (d) => d[1])])
+        .range([height, 0]);
+      const line = d3
+        .line()
+        .x((d) => xScale(new Date(d[0] * 1000)))
+        .y((d) => yScale(d[1]));
+      const xAxis = d3.axisBottom(xScale).ticks(5);
+      const yAxis = d3.axisLeft(yScale).ticks(5);
+      const xAxisGroup = svg
+        .append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0, ${height})`)
+        .call(xAxis);
+      const yAxisGroup = svg.append("g").attr("class", "y-axis").call(yAxis);
+      svg
+        .append("path")
+        .datum(data)
+        .attr("class", "line")
+        .attr("d", line)
+        .attr("fill", "none")
+        .attr("stroke", "#29b7cb")
+        .attr("stroke-width", 2);
+      svg
+        .selectAll(".dot")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("class", "dot")
+        .attr("cx", (d) => xScale(new Date(d[0] * 1000)))
+        .attr("cy", (d) => yScale(d[1]))
+        .attr("r", 3)
+        .attr("fill", "#ff6f61")
+        // on hover
+        .on("mouseover", function (event, d) {
+          d3.select(this)
+            .transition()
+            .duration(200)
+            .attr("r", 5)
+            .attr("fill", "#ff6f61");
+          svg
+            .append("text")
+            .attr("class", "tooltip")
+            .attr("fill", "white")
+            .attr("x", xScale(new Date(d[0] * 1000)))
+            .attr("y", yScale(d[1]) - 10)
+            .attr("text-anchor", "middle")
+            .text(`${d[1]} at ${new Date(d[0] * 1000).toLocaleString()}`);
+        })
+        .on("mouseout", function (event, d) {
+          d3.select(this)
+            .transition()
+            .duration(200)
+            .attr("r", 3)
+            .attr("fill", "#ff6f61");
+          svg.selectAll(".tooltip").remove();
+        });
+      // svg
+      //   .append("text")
+      //   .attr("x", width / 2)
+      //   .attr("y", 20)
+      //   .attr("text-anchor", "middle")
+      //   .style("font-size", "1.5em")
+      //   .style("fill", "#ff6f61")
+      //   .text(title);
+      svg
+        .append("text")
+        .attr("x", width - 10)
+        .attr("y", height - 10)
+        .attr("text-anchor", "end")
+        .style("font-size", "0.8em")
+        .style("fill", "#e0e0e0")
+        .text(`Period: ${period}`);
+      xAxisGroup
+        .selectAll("text")
+        .style("fill", "#e0e0e0")
+        .style("font-size", "0.8em");
+      yAxisGroup
+        .selectAll("text")
+        .style("fill", "#e0e0e0")
+        .style("font-size", "0.8em");
+      svg
+        .selectAll(".line")
+        .style("stroke", "#29b7cb")
+        .style("stroke-width", "2px");
+      svg
+        .selectAll(".dot")
+        .style("fill", "#ff6f61")
+        .style("stroke", "#e0e0e0")
+        .style("stroke-width", "1px");
+      svg.selectAll(".x-axis path, .y-axis path").style("stroke", "#e0e0e0");
+      svg
+        .selectAll(".x-axis line, .y-axis line")
+        .style("stroke", "#e0e0e0")
+        .style("stroke-width", "1px");
+      svg
+        .selectAll(".x-axis text, .y-axis text")
+        .style("fill", "#e0e0e0")
+        .style("font-size", "0.8em");
+      svg
+        .selectAll(".x-axis path, .y-axis path")
+        .style("fill", "none")
+        .style("stroke", "#e0e0e0");
+      svg
+        .selectAll(".x-axis line, .y-axis line")
+        .style("stroke", "#e0e0e0")
+        .style("stroke-width", "1px");
+      svg
+        .selectAll(".x-axis text, .y-axis text")
+        .style("fill", "#e0e0e0")
+        .style("font-size", "0.8em");
+    });
+  </script>
+</div>

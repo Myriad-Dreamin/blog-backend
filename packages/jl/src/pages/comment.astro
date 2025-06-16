@@ -1,10 +1,46 @@
 ---
-import fs from "node:fs/promises";
-import { resolve } from "node:path";
 import commentsRaw from "../../.data/article-comments.json";
 const comments = commentsRaw.sort(
   (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 );
+
+type Comment = (typeof comments)[0];
+const articleComments = new Map<string, Comment[]>();
+for (const comment of comments) {
+  if (!articleComments.has(comment.articleId)) {
+    articleComments.set(comment.articleId, []);
+  }
+  articleComments.get(comment.articleId)?.push(comment);
+}
+const articleEmails = new Map<string, Map<string, string[]>>();
+for (const comment of articleComments.values()) {
+  for (const c of comment) {
+    if (!articleEmails.has(c.articleId)) {
+      articleEmails.set(c.articleId, new Map());
+    }
+    const name = c.email.split("<")[0].trim();
+    if (name) {
+      if (!articleEmails.get(c.articleId)?.has(name)) {
+        articleEmails.get(c.articleId)?.set(name, []);
+      }
+      articleEmails.get(c.articleId)?.get(name)?.push(c.email);
+    }
+  }
+}
+
+const articles = {
+  emails: Object.fromEntries(
+    articleEmails
+      .entries()
+      .map(([articleId, emails]) => [
+        articleId,
+        Object.fromEntries(emails.entries()),
+      ])
+  ),
+  comments: Object.fromEntries(
+    comments.map((comment) => [comment.id, comment])
+  ),
+};
 ---
 
 <html lang="en">
@@ -36,12 +72,12 @@ const comments = commentsRaw.sort(
   </head>
   <body>
     <h1>Comments</h1>
-    <script is:inline>
+    <script is:inline define:vars={{ articles }}>
       function clickComment(element) {
         const headerParent = element.closest(".comment-header");
         const meta = JSON.parse(headerParent.getAttribute("data-meta"));
 
-        console.log("Comment meta:", meta);
+        console.log("Comment meta:", meta, articles);
 
         const makeAnchor = (url) => url;
 
@@ -61,11 +97,7 @@ const comments = commentsRaw.sort(
         const commentLink = `https://www.myriad-dreamin.com/article/${meta.articleId}/#comment-${meta.id}`;
         const cnCommentLink = `https://cn.myriad-dreamin.com/article/${meta.articleId}/#comment-${meta.id}`;
 
-        const subject = `Comment #${meta.id} to article "${meta.articleId}" on myriad-dreamin.com`;
-        const content = `Hello, ${nameWithoutEmail},
-I would like to authorize the following comment for the article "${meta.articleId}":
-
-The link to the article is:
+        const commentRef = `The link to the article is:
 - Canonical Url: ${makeAnchor(commentLink)}
 - Asia Mirror (such as China, Japan): ${makeAnchor(cnCommentLink)}
 
@@ -73,7 +105,62 @@ Here is the comment:
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>
 ${meta.content}
-<<<<<<<<<<<<<<<<<<<<<<<<<<
+<<<<<<<<<<<<<<<<<<<<<<<<<<`;
+        {
+          const replies = new Set();
+          // remove sending it self
+          replies.delete(meta.email);
+          const commentRe = /\[comment:(.+?)\]/g;
+          const userRe = /\[user:(.+?)\]/g;
+          let match;
+          while ((match = commentRe.exec(meta.content)) !== null) {
+            const commentId = match[1];
+            if (articles.comments[commentId]) {
+              const comment = articles.comments[commentId];
+              if (comment.email) {
+                replies.add(comment.email);
+              }
+            }
+          }
+          while ((match = userRe.exec(meta.content)) !== null) {
+            const userName = match[1];
+            if (articles.emails[meta.articleId]?.[userName]) {
+              replies.add(...articles.emails[meta.articleId][userName]);
+            }
+          }
+
+          const subject = `Receiving the Comment #${meta.id} from article "${meta.articleId}" on myriad-dreamin.com`;
+          const content = `Hello,
+You received the comment for the article "${meta.articleId}":
+
+${commentRef}
+
+If you have any questions, please feel free to contact me.
+
+Thank you!
+Best regards,
+Myriad Dreamin
+i.myriad-dreamin.com`;
+
+          // send email using Gmail
+          const mailtoLink = new URL(
+            `https://mail.google.com/mail/?view=cm&fs=1`
+          );
+          mailtoLink.searchParams.set("to", `Kamiya <camiyoru@gmail.com>`);
+          mailtoLink.searchParams.set("bcc", Array.from(replies).join(","));
+          // subject
+          mailtoLink.searchParams.set("su", subject);
+          mailtoLink.searchParams.set("body", content);
+          // trigger the mailto link
+          window.open(mailtoLink.toString(), "w1");
+        }
+
+        {
+          const subject = `Comment #${meta.id} to article "${meta.articleId}" on myriad-dreamin.com`;
+          const content = `Hello, ${nameWithoutEmail},
+I would like to authorize the following comment for the article "${meta.articleId}":
+
+${commentRef}
 
 If you would like to cancel this authorization, please reply to this email with
 the word "Cancel" in the "email body".
@@ -85,17 +172,17 @@ Best regards,
 Myriad Dreamin
 i.myriad-dreamin.com`;
 
-        // send email using Gmail
-        const mailtoLink = new URL(
-          `https://mail.google.com/mail/?view=cm&fs=1`
-        );
-        mailtoLink.searchParams.set("to", meta.email);
-        // subject
-        mailtoLink.searchParams.set("su", subject);
-        mailtoLink.searchParams.set("body", content);
-        // trigger the mailto link
-        window.open(mailtoLink.toString(), "_blank");
-        // mailto a confirmation email
+          // send email using Gmail
+          const mailtoLink = new URL(
+            `https://mail.google.com/mail/?view=cm&fs=1`
+          );
+          mailtoLink.searchParams.set("to", meta.email);
+          // subject
+          mailtoLink.searchParams.set("su", subject);
+          mailtoLink.searchParams.set("body", content);
+          // trigger the mailto link
+          window.open(mailtoLink.toString(), "w2");
+        }
       }
       window.clickComment = clickComment;
     </script>

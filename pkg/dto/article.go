@@ -32,9 +32,10 @@ type ArticleStat struct {
 }
 
 type ArticleComment struct {
-	Id        string `json:"id"`
-	ArticleId string `json:"articleId"`
-	Content   string `json:"content"`
-	Email     string `json:"email"`
-	CreatedAt int64  `json:"createdAt"`
+	Id         string `json:"id"`
+	ArticleId  string `json:"articleId"`
+	Content    string `json:"content"`
+	Email      string `json:"email"`
+	Authorized bool   `json:"authorized"`
+	CreatedAt  int64  `json:"createdAt"`
 }

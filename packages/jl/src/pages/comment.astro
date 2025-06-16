@@ -1,0 +1,123 @@
+---
+import fs from "node:fs/promises";
+import { resolve } from "node:path";
+import commentsRaw from "../../.data/article-comments.json";
+const comments = commentsRaw.sort(
+  (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Astro</title>
+    <style is:global>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      /* dark */
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+        margin: 2em;
+      }
+      .authorized-true {
+        color: #4caf50;
+      }
+      .authorized-false {
+        color: #f44336;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Comments</h1>
+    <script is:inline>
+      function clickComment(element) {
+        const headerParent = element.closest(".comment-header");
+        const meta = JSON.parse(headerParent.getAttribute("data-meta"));
+
+        console.log("Comment meta:", meta);
+
+        const makeAnchor = (url) => url;
+
+        const sqliteSQL = `UPDATE comments SET authorized = true WHERE id = ${JSON.stringify(meta.id).replace(/"/g, "'")};`;
+        window.navigator.clipboard
+          .writeText(sqliteSQL)
+          .then(() => {
+            // alert(`Copied SQL to clipboard:\n\n${sqliteSQL}`);
+          })
+          .catch((err) => {
+            console.error("Failed to copy text: ", err);
+            // alert("Failed to copy SQL to clipboard.");
+          });
+
+        const nameWithoutEmail = meta.email.split("<")[0].trim();
+
+        const commentLink = `https://www.myriad-dreamin.com/article/${meta.articleId}/#comment-${meta.id}`;
+        const cnCommentLink = `https://cn.myriad-dreamin.com/article/${meta.articleId}/#comment-${meta.id}`;
+
+        const subject = `Comment #${meta.id} to article "${meta.articleId}" on myriad-dreamin.com`;
+        const content = `Hello, ${nameWithoutEmail},
+I would like to authorize the following comment for the article "${meta.articleId}":
+
+The link to the article is:
+- Canonical Url: ${makeAnchor(commentLink)}
+- Asia Mirror (such as China, Japan): ${makeAnchor(cnCommentLink)}
+
+Here is the comment:
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>
+${meta.content}
+<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+If you would like to cancel this authorization, please reply to this email with the word "Cancel" in the subject line.
+
+If you have any questions, please feel free to contact me.
+
+Thank you!
+Best regards,
+Myriad Dreamin
+i.myriad-dreamin.com`;
+
+        // send email using Gmail
+        const mailtoLink = new URL(
+          `https://mail.google.com/mail/?view=cm&fs=1`
+        );
+        mailtoLink.searchParams.set("to", meta.email);
+        // subject
+        mailtoLink.searchParams.set("su", subject);
+        mailtoLink.searchParams.set("body", content);
+        // trigger the mailto link
+        window.open(mailtoLink.toString(), "_blank");
+        // mailto a confirmation email
+      }
+      window.clickComment = clickComment;
+    </script>
+    {
+      comments.map((comment) => (
+        <div class="json-line">
+          <div class="comment-header" data-meta={JSON.stringify(comment)}>
+            <strong
+              class={`authorized-${!!comment.authorized}`}
+              onclick="clickComment(this, 'authorize'); return false;"
+            >
+              Article:
+            </strong>{" "}
+            {comment.articleId}
+            <strong>id:</strong> {comment.id}
+            <strong>Date:</strong>{" "}
+            {new Date(comment.createdAt).toLocaleString()}
+          </div>
+          <p>
+            <strong>Content:</strong> {comment.content}
+          </p>
+        </div>
+      ))
+    }
+  </body>
+</html>

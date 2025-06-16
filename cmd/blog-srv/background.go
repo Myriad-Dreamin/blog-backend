@@ -146,7 +146,7 @@ func (h *Handler) createArticles(articles []dto.Article) {
 
 func (h *Handler) createComments() {
 	// Create table if not exists
-	_, err := h.db.Exec("CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, article_id TEXT, email TEXT, content TEXT, created_at INTEGER)")
+	_, err := h.db.Exec("CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, article_id TEXT, email TEXT, content TEXT, authorized BOOLEAN NOT NULL DEFAULT FALSE, created_at INTEGER)")
 	if err != nil {
 		log.Printf("error creating table: %s\n", err)
 		return

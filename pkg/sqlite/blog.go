@@ -95,7 +95,7 @@ func GetStats(db *sql.DB) ([]dto.ArticleStat, error) {
 }
 
 func GetComments(db *sql.DB) ([]dto.ArticleComment, error) {
-	rows, err := db.Query("SELECT id, article_id, content, email, created_at FROM comments")
+	rows, err := db.Query("SELECT id, article_id, content, email, authorized, created_at FROM comments")
 
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func GetComments(db *sql.DB) ([]dto.ArticleComment, error) {
 	var comments []dto.ArticleComment
 	for rows.Next() {
 		var comment dto.ArticleComment
-		if err := rows.Scan(&comment.Id, &comment.ArticleId, &comment.Content, &comment.Email, &comment.CreatedAt); err != nil {
+		if err := rows.Scan(&comment.Id, &comment.ArticleId, &comment.Content, &comment.Email, &comment.Authorized, &comment.CreatedAt); err != nil {
 			return nil, err
 		}
 		comments = append(comments, comment)

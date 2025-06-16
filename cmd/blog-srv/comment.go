@@ -73,7 +73,7 @@ func (h *Handler) handleCommentPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert comment into database
-	_, err = h.db.Exec("INSERT INTO comments (article_id, content, email, created_at) VALUES (?, ?, ?, ?)", articleId, content, email, createdAt)
+	_, err = h.db.Exec("INSERT INTO comments (article_id, content, email, authorized, created_at) VALUES (?, ?, ?, ?, ?)", articleId, content, email, false, createdAt)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

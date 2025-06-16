@@ -78,10 +78,12 @@ const { line }: Props = Astro.props;
     <span class={`heading level-${line.level}`}>
       <!-- <span class="logger">{line.logger}</span> -->
       <span class="status">Status: {line.status}</span>
-      <span class="ts">{new Date(line.ts * 1000).toISOString()}</span>
+      <span class="ts json-line-timestamp" data-timestamp={line.ts}
+        >{new Date(line.ts * 1000).toISOString()}</span
+      >
       <span class="msg">{line.msg}</span>
     </span>
-    <span class="duration">in {(line.duration * 1000).toFixed(1)}s</span>
+    <span class="duration">in {(line.duration * 1000).toFixed(1)}ms</span>
     from <span class="source">{line.source}</span>
     <!-- remote addr -->
     <span

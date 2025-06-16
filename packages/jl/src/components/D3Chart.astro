@@ -1,11 +1,32 @@
 ---
+import type { DistributionPoints } from "./Summary.astro";
+
 export interface Props {
-  data: [/*ts*/ number, /*count*/ number][];
+  data: DistributionPoints;
+  domains?: Map<number, Record<string, number>>;
   title: string;
-  period: "day" | "month";
+  period: string;
+  gran: number;
 }
 
-const { data, title, period }: Props = Astro.props;
+const { data: raw, domains, title, period, gran }: Props = Astro.props;
+
+const subDomain = (ts: number) => {
+  if (!domains) {
+    return "";
+  }
+  const res = domains.get(ts);
+  if (!res) {
+    return "";
+  }
+  const results = [];
+  for (const [domain, count] of Object.entries(res)) {
+    results.push(`\n${domain}: ${count}`);
+  }
+  return results.length > 0 ? results.join("\n") : "";
+};
+
+const data = raw.map((d) => [d[0], d[1], subDomain(d[0])]);
 ---
 
 <script src="https://d3js.org/d3.v6.js"></script>
@@ -16,11 +37,15 @@ const { data, title, period }: Props = Astro.props;
   .d3-chart-svg {
     overflow: visible;
   }
+  .tooltip {
+    pointer-events: none;
+    font-size: 10;
+  }
 </style>
 <div class="d3-chart">
-  <script define:vars={{ data, title, period }}>
+  <script define:vars={{ data, title, period, gran }}>
     const parent = document.currentScript.parentElement;
-    console.log("D3 Chart Data:", data);
+
     document.addEventListener("DOMContentLoaded", function () {
       const width = parent.clientWidth;
       const height = 300;
@@ -83,14 +108,40 @@ const { data, title, period }: Props = Astro.props;
             .duration(200)
             .attr("r", 5)
             .attr("fill", "#ff6f61");
-          svg
-            .append("text")
-            .attr("class", "tooltip")
-            .attr("fill", "white")
-            .attr("x", xScale(new Date(d[0] * 1000)))
-            .attr("y", yScale(d[1]) - 10)
-            .attr("text-anchor", "middle")
-            .text(`${d[1]} at ${new Date(d[0] * 1000).toLocaleString()}`);
+          /**
+           *
+           * @param svg {import("d3").Selection<SVGSVGElement, unknown, null, undefined>}
+           * @param text {string}
+           */
+          const splitText = (svg, text) => {
+            const lines = text.split("\n").filter((line) => line.trim() !== "");
+            if (lines.length <= 1) {
+              svg
+                .append("text")
+                .attr("class", "tooltip")
+                .attr("fill", "white")
+                .attr("x", xScale(new Date(d[0] * 1000)))
+                .attr("y", yScale(d[1]) - 10)
+                .attr("text-anchor", "middle")
+                .text(text);
+              return; // No need to split if there's only one line
+            }
+            const lineHeight = 15; // Adjust as needed
+            const textGroup = svg.append("g").attr("class", "tooltip");
+            lines.forEach((line, index) => {
+              textGroup
+                .append("text")
+                .attr("fill", "white")
+                .attr("x", xScale(new Date(d[0] * 1000)))
+                .attr("y", yScale(d[1]) - 10 + index * lineHeight)
+                .attr("text-anchor", "middle")
+                .text(line);
+            });
+          };
+          splitText(
+            svg,
+            `${d[1]} at ${new Date(d[0] * 1000).toLocaleString()}${d[2] || ""}`
+          );
         })
         .on("mouseout", function (event, d) {
           d3.select(this)
@@ -99,15 +150,24 @@ const { data, title, period }: Props = Astro.props;
             .attr("r", 3)
             .attr("fill", "#ff6f61");
           svg.selectAll(".tooltip").remove();
+        })
+        .on("click", function (event, d) {
+          // Handle click event if needed
+          console.log("Clicked on data point:", d);
+
+          // json-line-timestamp
+          const firstTimestampLessThanD0 =
+            document.querySelectorAll(`.json-line-timestamp`);
+
+          const d0 = d[0] + gran;
+          for (const el of firstTimestampLessThanD0) {
+            const compared = el.getAttribute("data-timestamp");
+            if (compared && parseInt(compared, 10) <= d0) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              break; // Stop after the first match
+            }
+          }
         });
-      // svg
-      //   .append("text")
-      //   .attr("x", width / 2)
-      //   .attr("y", 20)
-      //   .attr("text-anchor", "middle")
-      //   .style("font-size", "1.5em")
-      //   .style("fill", "#ff6f61")
-      //   .text(title);
       svg
         .append("text")
         .attr("x", width - 10)

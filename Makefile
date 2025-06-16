@@ -23,11 +23,14 @@ target/blog-http: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name
 	CGO_ENABLED=0 go build -tags netgo -o target/blog-http ./cmd/blog-http
 
 upload-http: target/blog-http
-	scp target/blog-http $(FRONTEND_SERVER):~
+	rsync -vr target/blog-http $(FRONTEND_SERVER):~
+
+jl-dev: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
+	cd packages/jl && pnpm dev --port 11465
 
 jl: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
 	rsync -vr $(FRONTEND_SERVER):~/www/caddy/log/ packages/jl/.data/log/
-	cd packages/jl && pnpm dev --port 11465
+	cd packages/jl && pnpm build && cd dist && python -m http.server -b 127.0.0.1 11465 
 
 $(BLOG_FRONTEND_PATH)/dist/articles.json: $(wildcard $(BLOG_FRONTEND_PATH)/content/article/*.typ)
 	cd $(BLOG_FRONTEND_PATH) && pnpm build
@@ -41,12 +44,12 @@ $(BLOG_FRONTEND_PATH)/dist/articles.json: $(wildcard $(BLOG_FRONTEND_PATH)/conte
 upload-data: .data/articles.json
 	@echo "Uploading data to server..."
 	@ssh $(SERVER_NAME) "mkdir -p $(BLOG_PATH)/.data"
-	@scp $^ $(SERVER_NAME):$(BLOG_PATH)/.data
+	@rsync -vr $^ $(SERVER_NAME):$(BLOG_PATH)/.data
 	@echo "Upload data complete."
 
 download-data:
 	@echo "Downloading data from server..."
-	@scp $(SERVER_NAME):$(BLOG_PATH)/.data/article-stats.json $(SERVER_NAME):$(BLOG_PATH)/.data/article-comments.json .data
+	@rsync -vr $(SERVER_NAME):$(BLOG_PATH)/.data/article-stats.json $(SERVER_NAME):$(BLOG_PATH)/.data/article-comments.json .data
 	@cp .data/article-stats.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-stats.json
 	@cp .data/article-comments.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-comments.json
 	@echo "Downloading data complete."
@@ -57,12 +60,12 @@ sync: upload-data download-data
 upload: target/blog-srv target/blog-cli
 	@echo "Uploading to server..."
 	@ssh $(SERVER_NAME) "mkdir -p $(BLOG_PATH)/target"
-	@scp $^ $(SERVER_NAME):$(BLOG_PATH)/target/
+	@rsync -vr $^ $(SERVER_NAME):$(BLOG_PATH)/target/
 	@echo "Upload complete."
 
 deploy: upload
 	@echo "Deploying to server..."
-	@scp $(ServerDockerfilePath) $(ServerServicePath) $(SERVER_NAME):$(BLOG_PATH) && \
+	@rsync -vr $(ServerDockerfilePath) $(ServerServicePath) $(SERVER_NAME):$(BLOG_PATH) && \
 	  ssh $(SERVER_NAME) "cd $(BLOG_PATH) && docker build -t blog-srv . && \
 	  docker-compose down && docker-compose up -d"
 	@echo "Deployment complete."

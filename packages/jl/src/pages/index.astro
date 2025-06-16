@@ -26,14 +26,11 @@ const readJsonl = (domain: string) =>
           return res;
         })
     );
-// .sort((a: LogLine, b: LogLine) => b.ts - a.ts)
 
-const jsonFiles = (await Promise.all(domains.map(readJsonl))).map((file) =>
-  file.sort((a, b) => b.ts - a.ts)
-);
-
-const summary = makeSummary(domains, jsonFiles);
-const jsonl = jsonFiles.flat().sort((a, b) => b.ts - a.ts);
+const jsonl = (await Promise.all(domains.map(readJsonl)))
+  .flat()
+  .sort((a, b) => b.ts - a.ts);
+const summary = makeSummary(domains, jsonl);
 ---
 
 <html lang="en">

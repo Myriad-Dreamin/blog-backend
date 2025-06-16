@@ -3,55 +3,101 @@ import D3Chart from "./D3Chart.astro";
 import type { LogLine } from "./JsonLine.astro";
 
 export interface Summary {
-  source: string;
+  sources: string[];
   accessCount: number;
   lastAccess: number;
-  distributionLastDay?: [number, number][];
-  distributionLastMonth?: [number, number][];
+  distributionLastDay?: Distribution;
+  distributionLastMonth?: Distribution;
 }
 
 export interface Props {
   summary: Summary[];
 }
 
-export function makeSummary(
-  domains: string[],
-  jsonFiles: LogLine[][]
-): Summary[] {
+export type DistributionPoints = [/*ts*/ number, /*count*/ number][];
+
+export interface Distribution {
+  all: DistributionPoints;
+  unique: DistributionPoints;
+  domains: Map<number, Record<string, number>>;
+}
+
+export function makeSummary(domains: string[], file: LogLine[]): Summary[] {
   const summaryList: Summary[] = [];
-  jsonFiles.forEach((file, index) => {
-    const fileSummary: Summary = {
-      source: domains[index],
-      accessCount: file.length,
-      lastAccess: file[0]?.ts || 0,
-      distributionLastDay: calculateDistribution(file, "day"), // last 48 hours
-      distributionLastMonth: calculateDistribution(file, "month"), // last 1 month
-    };
-    summaryList.push(fileSummary);
-  });
+  const fileSummary: Summary = {
+    sources: domains,
+    accessCount: file.length,
+    lastAccess: file[0]?.ts || 0,
+    distributionLastDay: calculateDistribution(file, "day"), // last 48 hours
+    distributionLastMonth: calculateDistribution(file, "month"), // last 1 month
+  };
+  summaryList.push(fileSummary);
   return summaryList;
   function calculateDistribution(
     file: LogLine[],
     period: "day" | "month"
-  ): [number, number][] {
+  ): Distribution {
     const distribution: Record<string, number> = {};
+    const distributionUnique: Record<string, number> = {};
+    const distributionDomains: Map<number, Record<string, number>> = new Map();
+    const accessedWindow: Record<string, Record<string, boolean>> = {};
     const now = Date.now() / 1000; // current time in seconds
 
     // if day it is bucketed by hour/minutes, if month it is bucketed by day
-    const bucketSize = period === "day" ? 60 * 5 : 86400; // 1 hour or 1 day in seconds
+    const bucketSize = period === "day" ? 60 * 60 : 86400; // 1 hour or 1 day in seconds
     const startTime = now - (period === "day" ? 48 * 3600 : 30 * 86400); // last 48 hours or last month
     const endTime = now;
     file.forEach((line) => {
       if (line.ts >= startTime && line.ts <= endTime) {
         const bucket = Math.floor(line.ts / bucketSize) * bucketSize;
         distribution[bucket] = (distribution[bucket] || 0) + 1;
+        {
+          const ip = line.request.remote_ip || "unknown";
+          if (!accessedWindow[bucket]) {
+            accessedWindow[bucket] = {};
+          }
+          if (!accessedWindow[bucket][ip]) {
+            accessedWindow[bucket][ip] = true;
+            distributionUnique[bucket] = (distributionUnique[bucket] || 0) + 1;
+          }
+        }
+        if (line.source) {
+          const domain = line.source;
+          // if (!distributionDomains[bucket]) {
+          //   distributionDomains[bucket] = {};
+          // }
+          // distributionDomains[bucket][domain] =
+          //   (distributionDomains[bucket][domain] || 0) + 1;
+
+          if (!distributionDomains.has(bucket)) {
+            distributionDomains.set(bucket, {});
+          }
+          const domainCount = distributionDomains.get(bucket);
+          if (domainCount) {
+            domainCount[domain] = (domainCount[domain] || 0) + 1;
+          } else {
+            distributionDomains.set(bucket, { [domain]: 1 });
+          }
+        }
       }
     });
+
+    const arrayFromObject = (
+      obj: Record<string, number>
+    ): DistributionPoints => {
+      return Object.entries(obj)
+        .map(([key, value]) => [parseInt(key, 10), value] as [number, number])
+        .sort((a, b) => a[0] - b[0]); // Sort by timestamp
+    };
+
     // Convert distribution to an array of [timestamp, count] pairs
-    const distributionArray: [number, number][] = Object.entries(distribution)
-      .map(([key, value]) => [parseInt(key, 10), value] as [number, number])
-      .sort((a, b) => a[0] - b[0]); // Sort by timestamp
-    return distributionArray;
+    const distributionArray = arrayFromObject(distribution);
+    const distributionUniqueArray = arrayFromObject(distributionUnique);
+    return {
+      all: distributionArray,
+      unique: distributionUniqueArray,
+      domains: distributionDomains,
+    };
   }
 }
 
@@ -77,23 +123,43 @@ const { summary }: Props = Astro.props;
   {
     summary.map((item) => (
       <div class="summary-item">
-        <h3>{item.source}</h3>
+        <h3>{item.sources.toString()}</h3>
         <p class="kv">Access Count: {item.accessCount}</p>
         <p class="kv">
           Last Access: {new Date(item.lastAccess * 1000).toISOString()}
         </p>
         {item.distributionLastDay && (
           <D3Chart
-            data={item.distributionLastDay}
+            data={item.distributionLastDay.all}
+            domains={item.distributionLastDay.domains}
             title="Access Distribution Last 48 Hours"
-            period="day"
+            period="day (all)"
+            gran={60 * 60}
+          />
+        )}
+        {item.distributionLastDay && (
+          <D3Chart
+            data={item.distributionLastDay.unique}
+            title="Access Distribution Last 48 Hours"
+            period="day (unique)"
+            gran={60 * 60}
           />
         )}
         {item.distributionLastMonth && (
           <D3Chart
-            data={item.distributionLastMonth}
+            data={item.distributionLastMonth.all}
+            domains={item.distributionLastMonth.domains}
             title="Access Distribution Last Month"
-            period="month"
+            period="month (all)"
+            gran={86400}
+          />
+        )}
+        {item.distributionLastMonth && (
+          <D3Chart
+            data={item.distributionLastMonth.unique}
+            title="Access Distribution Last Month"
+            period="month (unique)"
+            gran={86400}
           />
         )}
       </div>

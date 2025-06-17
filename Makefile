@@ -6,7 +6,7 @@ endif
 BACKEND_DATA_PATH := $(BACKEND_PATH)/backend/data
 
 prepare:
-	@ssh $(SERVER_NAME) "mkdir -p $(BACKEND_PATH)/target"
+	@ssh $(SERVER_NAME) "mkdir -p $(BACKEND_PATH)/dist/blog $(BACKEND_PATH)/target"
 
 target/blog-srv: $(wildcard cmd/blog-srv/*.go) $(shell find pkg/ -type f -name '*.go')
 	@echo "Building blog-srv..."
@@ -80,6 +80,13 @@ deploy: upload
 	  docker compose down blog-backend && docker compose up blog-backend -d"
 	@echo "Deployment complete."
 
+deploy-frontend-cn:
+	@cd $(FRONTEND_PATH) && pnpm build:cn
+	@rsync -vr --checksum $(FRONTEND_PATH)/dist/ $(SERVER_NAME):$(BACKEND_PATH)/dist/blog
+	@echo "Deployment frontend CN complete."
+
+deploy-frontend: deploy-frontend-cn
+
 logs:
 	@echo "Fetching logs from server..."
 	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && docker compose logs blog-backend -f" || true
@@ -87,4 +94,4 @@ logs:
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BACKEND_PATH) && bash" || true
 
-.PHONY: all clean sync download-data upload login deploy jl
+.PHONY: all clean sync download-data upload login deploy deploy-frontend jl

@@ -1,10 +1,48 @@
 services:
-  app:
-    image: blog-srv:latest
-    container_name: blog-srv
+  caddy:
+    container_name: caddy
+    image: caddy:latest
     restart: unless-stopped
+    environment:
+      TZ: "Asia/Shanghai"
     ports:
-      - "13333:13333"
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
-      - ./.data:/app/.data
+      - ./caddy/config:/etc/caddy
+      - ./caddy/data:/data
+      - ./caddy/log:/var/log/caddy
+  homepage:
+    container_name: homepage
+    image: alpine:latest
+    restart: unless-stopped
+    environment:
+      TZ: "Asia/Shanghai"
     working_dir: /app
+    volumes:
+      - /usr/local/bin/blog-http:/usr/local/bin/blog-http:ro
+      - ./dist/homepage/:/app/
+    command: "blog-http :80"
+  blog-frontend:
+    container_name: blog-frontend
+    image: alpine:latest
+    restart: unless-stopped
+    environment:
+      TZ: "Asia/Shanghai"
+    working_dir: /app
+    volumes:
+      - /usr/local/bin/blog-http:/usr/local/bin/blog-http:ro
+      - ./dist/blog/:/app/
+    command: "blog-http :80"
+  blog-backend:
+    container_name: blog-backend
+    image: ubuntu:24.04
+    restart: unless-stopped
+    environment:
+      TZ: "Asia/Shanghai"
+    volumes:
+      - ./target/blog-srv:/usr/local/bin/blog-srv:ro
+      - ./backend/data:/app/.data
+    working_dir: /app
+    command: "blog-srv"

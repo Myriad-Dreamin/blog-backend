@@ -3,9 +3,10 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
+BACKEND_DATA_PATH := $(BACKEND_PATH)/backend/data
 
-ServerDockerfilePath ?= deployment/server/Dockerfile
-ServerServicePath ?= deployment/server/docker-compose.yaml
+prepare:
+	@ssh $(SERVER_NAME) "mkdir -p $(BACKEND_PATH)/target"
 
 target/blog-srv: $(wildcard cmd/blog-srv/*.go) $(shell find pkg/ -type f -name '*.go')
 	@echo "Building blog-srv..."
@@ -32,10 +33,10 @@ jl: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
 	rsync -vr $(FRONTEND_SERVER):~/www/caddy/log/ packages/jl/.data/log/
 	cd packages/jl && pnpm build && cd dist && python -m http.server -b 127.0.0.1 11465 
 
-$(BLOG_FRONTEND_PATH)/dist/articles.json: $(wildcard $(BLOG_FRONTEND_PATH)/content/article/*.typ)
-	cd $(BLOG_FRONTEND_PATH) && pnpm build
+$(FRONTEND_PATH)/dist/articles.json: $(wildcard $(FRONTEND_PATH)/content/article/*.typ)
+	cd $(FRONTEND_PATH) && pnpm build
 
-.data/articles.json: $(BLOG_FRONTEND_PATH)/dist/articles.json
+.data/articles.json: $(FRONTEND_PATH)/dist/articles.json
 	@echo "Copying articles.json..."
 	@mkdir -p .data
 	@cp $< $@
@@ -43,39 +44,47 @@ $(BLOG_FRONTEND_PATH)/dist/articles.json: $(wildcard $(BLOG_FRONTEND_PATH)/conte
 
 upload-data: .data/articles.json
 	@echo "Uploading data to server..."
-	@ssh $(SERVER_NAME) "mkdir -p $(BLOG_PATH)/.data"
-	@rsync -vr $^ $(SERVER_NAME):$(BLOG_PATH)/.data
+	@ssh $(SERVER_NAME) "mkdir -p $(BACKEND_DATA_PATH)/"
+	@rsync -vr $^ $(SERVER_NAME):$(BACKEND_DATA_PATH)/
 	@echo "Upload data complete."
 
 download-data:
 	@echo "Downloading data from server..."
-	@rsync -vr $(SERVER_NAME):$(BLOG_PATH)/.data/article-stats.json $(SERVER_NAME):$(BLOG_PATH)/.data/article-comments.json $(SERVER_NAME):$(BLOG_PATH)/.data/article-email-comments.json .data
-	@cp .data/article-stats.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-stats.json
-	@cp .data/article-comments.json $(BLOG_FRONTEND_PATH)/content/snapshot/article-comments.json
+	@rsync -vr $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-stats.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-comments.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-email-comments.json .data
+	@cp .data/article-stats.json $(FRONTEND_PATH)/content/snapshot/article-stats.json
+	@cp .data/article-comments.json $(FRONTEND_PATH)/content/snapshot/article-comments.json
 	@cp .data/article-email-comments.json packages/jl/.data/article-comments.json
 	@echo "Downloading data complete."
 
 sync: upload-data download-data
 	@echo "Sync complete."
 
-upload: target/blog-srv target/blog-cli
-	@echo "Uploading to server..."
-	@ssh $(SERVER_NAME) "mkdir -p $(BLOG_PATH)/target"
-	@rsync -vr $^ $(SERVER_NAME):$(BLOG_PATH)/target/
+uploadA: scripts/reload-caddy.sh deployment/server/docker-compose.yaml
+	rsync -vr deployment/server/docker-compose.yaml $(SERVER_NAME):$(BACKEND_PATH)/docker-compose.yaml
+	rsync -vr scripts/reload-caddy.sh $(SERVER_NAME):$(BACKEND_PATH)/scripts/reload-caddy.sh
+
+uploadB: target/blog-srv target/blog-cli
+	rsync -vr $^ $(SERVER_NAME):$(BACKEND_PATH)/target/
+
+upload: uploadA uploadB
 	@echo "Upload complete."
+
+reload-caddy:
+	@echo "Reloading Caddy..."
+	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && ./scripts/reload-caddy.sh"
+	@echo "Caddy reloaded."
 
 deploy: upload
 	@echo "Deploying to server..."
-	@rsync -vr $(ServerDockerfilePath) $(ServerServicePath) $(SERVER_NAME):$(BLOG_PATH) && \
-	  ssh $(SERVER_NAME) "cd $(BLOG_PATH) && docker build -t blog-srv . && \
-	  docker-compose down && docker-compose up -d"
+	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && \
+	  docker compose down blog-backend && docker compose up blog-backend -d"
 	@echo "Deployment complete."
 
 logs:
 	@echo "Fetching logs from server..."
-	@ssh $(SERVER_NAME) "cd $(BLOG_PATH) && docker-compose logs -f" || true
+	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && docker compose logs blog-backend -f" || true
 
 login:
-	@ssh $(SERVER_NAME) -t "cd $(BLOG_PATH) && bash" || true
+	@ssh $(SERVER_NAME) -t "cd $(BACKEND_PATH) && bash" || true
 
 .PHONY: all clean sync download-data upload login deploy jl

@@ -80,6 +80,15 @@ comment-delete:
 	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && target/blog-cli --data-dir $(BACKEND_DATA_PATH) comment reject $(ID)"
 	@$(MAKE) download-data
 
+comments-sync:
+	@scripts/sync-comments-snapshot.sh
+
+install-comments-cron:
+	@scripts/install-comments-cron.sh
+
+uninstall-comments-cron:
+	@scripts/install-comments-cron.sh --uninstall
+
 sync: upload-data download-data
 	@echo "Sync complete."
 
@@ -128,4 +137,4 @@ logs:
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BACKEND_PATH) && bash" || true
 
-.PHONY: all clean sync download-data comment-list comment-review comment-authorize comment-reject comment-delete upload login deploy deploy-frontend jl deploy-paseo push-gistd-frontend
+.PHONY: all clean sync download-data comments-sync install-comments-cron uninstall-comments-cron comment-list comment-review comment-authorize comment-reject comment-delete upload login deploy deploy-frontend jl deploy-paseo push-gistd-frontend

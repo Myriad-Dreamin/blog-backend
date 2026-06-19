@@ -1,0 +1,4 @@
+interface:
+  display_name: "Blog Comment Moderator"
+  short_description: "Review blog comments with blog-cli"
+  default_prompt: "Use $blog-comment-moderator to review pending blog comments."

@@ -3,9 +3,9 @@ package main
 import (
 	"database/sql"
 	"log"
-	"net/mail"
 	"time"
 
+	"github.com/Myriad-Dreamin/blog-backend/pkg/commentmoderation"
 	"github.com/Myriad-Dreamin/blog-backend/pkg/dto"
 	"github.com/Myriad-Dreamin/blog-backend/pkg/iou"
 	"github.com/Myriad-Dreamin/blog-backend/pkg/sqlite"
@@ -91,19 +91,8 @@ func (h *Handler) writeSnapshot() {
 			log.Printf("error write build info to file: %s\n", err)
 		}
 
-		var withEmail = false
-		if !withEmail {
-			for i := range comments {
-				addr, err := mail.ParseAddress(comments[i].Email)
-				if err != nil {
-					comments[i].Email = ""
-				}
-				comments[i].Email = addr.Name
-			}
-		}
-
 		// write comments to file
-		err = iou.WriteJsonToFile("./.data/article-comments.json", comments)
+		err = iou.WriteJsonToFile("./.data/article-comments.json", commentmoderation.PublicComments(comments))
 		if err != nil {
 			log.Printf("error write build info to file: %s\n", err)
 		}

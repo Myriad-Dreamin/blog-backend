@@ -2,8 +2,8 @@ package main
 
 import (
 	"net/http"
-	"net/mail"
 
+	"github.com/Myriad-Dreamin/blog-backend/pkg/commentmoderation"
 	"github.com/Myriad-Dreamin/blog-backend/pkg/sqlite"
 )
 
@@ -23,18 +23,7 @@ func (h *Handler) handleSnapshotComments(w http.ResponseWriter, r *http.Request)
 				return nil, err
 			}
 
-			var withEmail = false
-			if !withEmail {
-				for i := range comments {
-					addr, err := mail.ParseAddress(comments[i].Email)
-					if err != nil {
-						comments[i].Email = ""
-					}
-					comments[i].Email = addr.Name
-				}
-			}
-
-			return comments, nil
+			return commentmoderation.PublicComments(comments), nil
 		})
 	}
 }

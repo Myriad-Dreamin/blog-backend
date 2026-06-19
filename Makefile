@@ -53,10 +53,9 @@ upload-data: .data/articles.json
 
 download-data:
 	@echo "Downloading data from server..."
-	@rsync -vr $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-stats.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-comments.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-email-comments.json .data
+	@rsync -vr $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-stats.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-comments.json .data
 	@cp .data/article-stats.json $(FRONTEND_PATH)/content/snapshot/article-stats.json
 	@cp .data/article-comments.json $(FRONTEND_PATH)/content/snapshot/article-comments.json
-	@cp .data/article-email-comments.json packages/jl/.data/article-comments.json
 	@echo "Downloading data complete."
 
 sync: upload-data download-data

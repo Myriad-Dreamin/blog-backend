@@ -23,8 +23,11 @@ target/blog-cli: $(wildcard cmd/blog-cli/*.go) $(shell find pkg/ -type f -name '
 target/blog-http: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
 	CGO_ENABLED=0 go build -tags netgo -o target/blog-http ./cmd/blog-http
 
-upload-http: target/blog-http
-	rsync -vr target/blog-http $(FRONTEND_SERVER):~
+target/paseo-http: $(wildcard cmd/paseo-http/*.go) $(shell find pkg/ -type f -name '*.go')
+	CGO_ENABLED=0 go build -tags netgo -o target/paseo-http ./cmd/paseo-http
+
+upload-http: target/paseo-http target/blog-http
+	rsync -vr target/blog-http target/paseo-http $(FRONTEND_SERVER):~
 
 jl-dev: $(wildcard cmd/blog-http/*.go) $(shell find pkg/ -type f -name '*.go')
 	cd packages/jl && pnpm dev --port 11465
@@ -87,6 +90,10 @@ deploy-frontend-cn:
 
 deploy-frontend: deploy-frontend-cn
 
+MeowFlow := $(HOME)/work/ts/meow-flow
+deploy-paseo:
+	cd $(MeowFlow) && pnpm --filter app build:web && rsync -vr --checksum $(MeowFlow)/packages/app/dist/ $(SERVER_NAME):$(BACKEND_PATH)/dist/paseo
+
 Gistd := $(HOME)/work/ts/gistd
 push-gistd-frontend:
 	cd $(Gistd) && pnpm build
@@ -100,4 +107,4 @@ logs:
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BACKEND_PATH) && bash" || true
 
-.PHONY: all clean sync download-data upload login deploy deploy-frontend jl push-gistd-frontend
+.PHONY: all clean sync download-data upload login deploy deploy-frontend jl deploy-paseo push-gistd-frontend

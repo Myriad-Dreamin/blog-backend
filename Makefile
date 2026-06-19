@@ -87,6 +87,12 @@ deploy-frontend-cn:
 
 deploy-frontend: deploy-frontend-cn
 
+Gistd := $(HOME)/work/ts/gistd
+push-gistd-frontend:
+	cd $(Gistd) && pnpm build
+	@ssh $(SERVER_NAME) "mkdir -p $(BACKEND_PATH)/dist/gistd"
+	rsync -vr --checksum --delete $(Gistd)/dist/ $(SERVER_NAME):$(BACKEND_PATH)/dist/gistd/
+
 logs:
 	@echo "Fetching logs from server..."
 	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && docker compose logs blog-backend -f" || true
@@ -94,4 +100,4 @@ logs:
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BACKEND_PATH) && bash" || true
 
-.PHONY: all clean sync download-data upload login deploy deploy-frontend jl
+.PHONY: all clean sync download-data upload login deploy deploy-frontend jl push-gistd-frontend

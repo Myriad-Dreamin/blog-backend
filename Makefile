@@ -53,10 +53,32 @@ upload-data: .data/articles.json
 
 download-data:
 	@echo "Downloading data from server..."
-	@rsync -vr $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-stats.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-comments.json .data
+	@rsync -vr $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-stats.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-comments.json $(SERVER_NAME):$(BACKEND_DATA_PATH)/article-email-comments.json .data
 	@cp .data/article-stats.json $(FRONTEND_PATH)/content/snapshot/article-stats.json
 	@cp .data/article-comments.json $(FRONTEND_PATH)/content/snapshot/article-comments.json
 	@echo "Downloading data complete."
+
+comment-list: target/blog-cli
+	@target/blog-cli comment list --state pending --format table
+
+comment-review: target/blog-cli
+	@test -n "$(ID)" || (echo "usage: make comment-review ID=<comment-id>"; exit 2)
+	@target/blog-cli comment review $(ID)
+
+comment-authorize:
+	@test -n "$(ID)" || (echo "usage: make comment-authorize ID=<comment-id>"; exit 2)
+	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && target/blog-cli --data-dir $(BACKEND_DATA_PATH) comment authorize $(ID)"
+	@$(MAKE) download-data
+
+comment-reject:
+	@test -n "$(ID)" || (echo "usage: make comment-reject ID=<comment-id>"; exit 2)
+	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && target/blog-cli --data-dir $(BACKEND_DATA_PATH) comment reject $(ID)"
+	@$(MAKE) download-data
+
+comment-delete:
+	@test -n "$(ID)" || (echo "usage: make comment-delete ID=<comment-id>"; exit 2)
+	@ssh $(SERVER_NAME) "cd $(BACKEND_PATH) && target/blog-cli --data-dir $(BACKEND_DATA_PATH) comment reject $(ID)"
+	@$(MAKE) download-data
 
 sync: upload-data download-data
 	@echo "Sync complete."
@@ -106,4 +128,4 @@ logs:
 login:
 	@ssh $(SERVER_NAME) -t "cd $(BACKEND_PATH) && bash" || true
 
-.PHONY: all clean sync download-data upload login deploy deploy-frontend jl deploy-paseo push-gistd-frontend
+.PHONY: all clean sync download-data comment-list comment-review comment-authorize comment-reject comment-delete upload login deploy deploy-frontend jl deploy-paseo push-gistd-frontend

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"time"
@@ -76,7 +77,7 @@ func (h *Handler) writeSnapshot() {
 			log.Printf("error write build info to file: %s\n", err)
 		}
 	}
-	// export comments to `.data/article-comments.json`
+	// export private comments and the public approved-only comment snapshot
 	{
 		comments, err := sqlite.GetComments(h.db)
 		if err != nil {
@@ -135,9 +136,13 @@ func (h *Handler) createArticles(articles []dto.Article) {
 
 func (h *Handler) createComments() {
 	// Create table if not exists
-	_, err := h.db.Exec("CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, article_id TEXT, email TEXT, content TEXT, authorized BOOLEAN NOT NULL DEFAULT FALSE, created_at INTEGER)")
+	_, err := h.db.Exec("CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, article_id TEXT, email TEXT, content TEXT, authorized BOOLEAN NOT NULL DEFAULT FALSE, rejected BOOLEAN NOT NULL DEFAULT FALSE, created_at INTEGER)")
 	if err != nil {
 		log.Printf("error creating table: %s\n", err)
+		return
+	}
+	if err := commentmoderation.EnsureRejectedColumn(context.Background(), h.db); err != nil {
+		log.Printf("error ensuring rejected column: %s\n", err)
 		return
 	}
 	// Create index if not exists

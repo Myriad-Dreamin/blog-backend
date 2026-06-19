@@ -37,5 +37,6 @@ type ArticleComment struct {
 	Content    string `json:"content"`
 	Email      string `json:"email"`
 	Authorized bool   `json:"authorized"`
+	Rejected   bool   `json:"rejected"`
 	CreatedAt  int64  `json:"createdAt"`
 }

@@ -19,10 +19,16 @@ import (
 
 const defaultOwnerEmail = commentmoderation.DefaultOwnerEmail
 
+const (
+	commentSourceSnapshot = "snapshot"
+	commentSourceDB       = "db"
+)
+
 type cliConfig struct {
-	dataDir    string
-	dbPath     string
-	ownerEmail string
+	dataDir      string
+	dbPath       string
+	commentsPath string
+	ownerEmail   string
 }
 
 func newCommentCmd(cfg *cliConfig) *cobra.Command {
@@ -44,18 +50,13 @@ func newCommentListCmd(cfg *cliConfig) *cobra.Command {
 	var state string
 	var format string
 	var limit int
+	var source string
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List comments by moderation state",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			db, err := cfg.openDB()
-			if err != nil {
-				return err
-			}
-			defer db.Close()
-
-			comments, err := commentmoderation.ListComments(cmd.Context(), db, commentmoderation.ListOptions{
+			comments, err := cfg.listComments(cmd.Context(), source, commentmoderation.ListOptions{
 				State: state,
 				Limit: limit,
 			})
@@ -67,6 +68,7 @@ func newCommentListCmd(cfg *cliConfig) *cobra.Command {
 			case "json":
 				return writeJSON(cmd.OutOrStdout(), comments)
 			case "table":
+				cfg.writeSnapshotRefreshReminder(cmd, source, format)
 				printCommentTable(cmd.OutOrStdout(), comments)
 				return nil
 			default:
@@ -74,27 +76,23 @@ func newCommentListCmd(cfg *cliConfig) *cobra.Command {
 			}
 		},
 	}
-	cmd.Flags().StringVar(&state, "state", commentmoderation.StatePending, "comment state: pending, approved, or all")
+	cmd.Flags().StringVar(&state, "state", commentmoderation.StatePending, "comment state: pending, approved, rejected, or all")
 	cmd.Flags().StringVar(&format, "format", "table", "output format: table or json")
 	cmd.Flags().IntVar(&limit, "limit", 20, "maximum comments to list; use 0 for no limit")
+	cmd.Flags().StringVar(&source, "source", commentSourceSnapshot, "comment source: snapshot or db")
 	return cmd
 }
 
 func newCommentShowCmd(cfg *cliConfig) *cobra.Command {
 	var format string
+	var source string
 
 	cmd := &cobra.Command{
 		Use:   "show <id>",
 		Short: "Show one comment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			db, err := cfg.openDB()
-			if err != nil {
-				return err
-			}
-			defer db.Close()
-
-			comment, err := commentmoderation.GetComment(cmd.Context(), db, args[0])
+			comment, err := cfg.getComment(cmd.Context(), source, args[0])
 			if err != nil {
 				return err
 			}
@@ -103,6 +101,7 @@ func newCommentShowCmd(cfg *cliConfig) *cobra.Command {
 			case "json":
 				return writeJSON(cmd.OutOrStdout(), comment)
 			case "markdown":
+				cfg.writeSnapshotRefreshReminder(cmd, source, format)
 				printCommentMarkdown(cmd.OutOrStdout(), comment)
 				return nil
 			default:
@@ -111,18 +110,20 @@ func newCommentShowCmd(cfg *cliConfig) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&format, "format", "markdown", "output format: markdown or json")
+	cmd.Flags().StringVar(&source, "source", commentSourceSnapshot, "comment source: snapshot or db")
 	return cmd
 }
 
 func newCommentDraftCmd(cfg *cliConfig) *cobra.Command {
 	var format string
+	var source string
 
 	cmd := &cobra.Command{
 		Use:   "draft <id>",
 		Short: "Generate owner and author notification drafts",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bundle, err := cfg.buildDraftBundle(cmd.Context(), args[0])
+			bundle, err := cfg.buildDraftBundle(cmd.Context(), source, args[0])
 			if err != nil {
 				return err
 			}
@@ -130,6 +131,7 @@ func newCommentDraftCmd(cfg *cliConfig) *cobra.Command {
 			case "json":
 				return writeJSON(cmd.OutOrStdout(), bundle)
 			case "markdown":
+				cfg.writeSnapshotRefreshReminder(cmd, source, format)
 				printDraftMarkdown(cmd.OutOrStdout(), bundle)
 				return nil
 			default:
@@ -138,18 +140,20 @@ func newCommentDraftCmd(cfg *cliConfig) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&format, "format", "markdown", "output format: markdown or json")
+	cmd.Flags().StringVar(&source, "source", commentSourceSnapshot, "comment source: snapshot or db")
 	return cmd
 }
 
 func newCommentReviewCmd(cfg *cliConfig) *cobra.Command {
 	var format string
+	var source string
 
 	cmd := &cobra.Command{
 		Use:   "review <id>",
 		Short: "Show a complete moderation packet for one comment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			bundle, err := cfg.buildDraftBundle(cmd.Context(), args[0])
+			bundle, err := cfg.buildDraftBundle(cmd.Context(), source, args[0])
 			if err != nil {
 				return err
 			}
@@ -157,6 +161,7 @@ func newCommentReviewCmd(cfg *cliConfig) *cobra.Command {
 			case "json":
 				return writeJSON(cmd.OutOrStdout(), bundle)
 			case "markdown":
+				cfg.writeSnapshotRefreshReminder(cmd, source, format)
 				printReviewMarkdown(cmd.OutOrStdout(), bundle)
 				return nil
 			default:
@@ -165,24 +170,25 @@ func newCommentReviewCmd(cfg *cliConfig) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&format, "format", "markdown", "output format: markdown or json")
+	cmd.Flags().StringVar(&source, "source", commentSourceSnapshot, "comment source: snapshot or db")
 	return cmd
 }
 
 func newCommentAuthorizeCmd(cfg *cliConfig) *cobra.Command {
-	return newCommentStateCmd(cfg, "authorize", true)
+	return newCommentStateCmd(cfg, "authorize", commentmoderation.StateApproved)
 }
 
 func newCommentRejectCmd(cfg *cliConfig) *cobra.Command {
-	return newCommentStateCmd(cfg, "reject", false)
+	return newCommentStateCmd(cfg, "reject", commentmoderation.StateRejected)
 }
 
-func newCommentStateCmd(cfg *cliConfig, name string, authorized bool) *cobra.Command {
+func newCommentStateCmd(cfg *cliConfig, name string, state string) *cobra.Command {
 	var format string
 	var export bool
 
 	cmd := &cobra.Command{
 		Use:   name + " <id>",
-		Short: commentStateShort(name, authorized),
+		Short: commentStateShort(name, state),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			db, err := cfg.openDB()
@@ -192,7 +198,7 @@ func newCommentStateCmd(cfg *cliConfig, name string, authorized bool) *cobra.Com
 			defer db.Close()
 
 			id := args[0]
-			if err := commentmoderation.SetCommentAuthorized(cmd.Context(), db, id, authorized); err != nil {
+			if err := commentmoderation.SetCommentState(cmd.Context(), db, id, state); err != nil {
 				return err
 			}
 			if export {
@@ -202,18 +208,14 @@ func newCommentStateCmd(cfg *cliConfig, name string, authorized bool) *cobra.Com
 			}
 
 			result := map[string]any{
-				"id":         id,
-				"authorized": authorized,
-				"exported":   export,
+				"id":       id,
+				"state":    state,
+				"exported": export,
 			}
 			switch format {
 			case "json":
 				return writeJSON(cmd.OutOrStdout(), result)
 			case "text":
-				state := "pending"
-				if authorized {
-					state = "approved"
-				}
 				fmt.Fprintf(cmd.OutOrStdout(), "comment %s marked %s\n", id, state)
 				if export {
 					fmt.Fprintf(cmd.OutOrStdout(), "comment snapshots exported to %s\n", cfg.dataDir)
@@ -280,25 +282,114 @@ func (cfg *cliConfig) openDB() (*sql.DB, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := commentmoderation.EnsureRejectedColumn(context.Background(), db); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return db, nil
 }
 
-func (cfg *cliConfig) buildDraftBundle(ctx context.Context, id string) (commentmoderation.DraftBundle, error) {
-	db, err := cfg.openDB()
+func (cfg *cliConfig) listComments(ctx context.Context, source string, opts commentmoderation.ListOptions) ([]dto.ArticleComment, error) {
+	source, err := normalizeCommentSource(source)
 	if err != nil {
-		return commentmoderation.DraftBundle{}, err
+		return nil, err
 	}
-	defer db.Close()
 
-	comment, err := commentmoderation.GetComment(ctx, db, id)
+	switch source {
+	case commentSourceSnapshot:
+		comments, err := cfg.loadSnapshotComments()
+		if err != nil {
+			return nil, err
+		}
+		return commentmoderation.ListCommentsFromSlice(comments, opts)
+	case commentSourceDB:
+		db, err := cfg.openDB()
+		if err != nil {
+			return nil, err
+		}
+		defer db.Close()
+		return commentmoderation.ListComments(ctx, db, opts)
+	default:
+		return nil, fmt.Errorf("unknown comment source %q", source)
+	}
+}
+
+func (cfg *cliConfig) getComment(ctx context.Context, source string, id string) (dto.ArticleComment, error) {
+	source, err := normalizeCommentSource(source)
+	if err != nil {
+		return dto.ArticleComment{}, err
+	}
+
+	switch source {
+	case commentSourceSnapshot:
+		comments, err := cfg.loadSnapshotComments()
+		if err != nil {
+			return dto.ArticleComment{}, err
+		}
+		return commentmoderation.GetCommentFromSlice(comments, id)
+	case commentSourceDB:
+		db, err := cfg.openDB()
+		if err != nil {
+			return dto.ArticleComment{}, err
+		}
+		defer db.Close()
+		return commentmoderation.GetComment(ctx, db, id)
+	default:
+		return dto.ArticleComment{}, fmt.Errorf("unknown comment source %q", source)
+	}
+}
+
+func (cfg *cliConfig) buildDraftBundle(ctx context.Context, source string, id string) (commentmoderation.DraftBundle, error) {
+	comment, err := cfg.getComment(ctx, source, id)
 	if err != nil {
 		return commentmoderation.DraftBundle{}, err
 	}
-	comments, err := commentmoderation.ListComments(ctx, db, commentmoderation.ListOptions{State: commentmoderation.StateAll})
+	comments, err := cfg.listComments(ctx, source, commentmoderation.ListOptions{State: commentmoderation.StateAll})
 	if err != nil {
 		return commentmoderation.DraftBundle{}, err
 	}
 	return commentmoderation.BuildDraftBundle(comment, comments, cfg.ownerEmail)
+}
+
+func (cfg *cliConfig) loadSnapshotComments() ([]dto.ArticleComment, error) {
+	return commentmoderation.LoadSnapshotComments(commentmoderation.SnapshotOptions{
+		PublicPath: cfg.publicCommentsPath(),
+		EmailPath:  filepath.Join(cfg.dataDir, commentmoderation.EmailCommentsFilename),
+	})
+}
+
+func (cfg *cliConfig) publicCommentsPath() string {
+	if cfg.commentsPath != "" {
+		return cfg.commentsPath
+	}
+	return filepath.Join(cfg.dataDir, commentmoderation.PublicCommentsFilename)
+}
+
+func (cfg *cliConfig) writeSnapshotRefreshReminder(cmd *cobra.Command, source string, format string) {
+	if strings.EqualFold(format, "json") {
+		return
+	}
+	source, err := normalizeCommentSource(source)
+	if err != nil || source != commentSourceSnapshot {
+		return
+	}
+	fmt.Fprintf(
+		cmd.ErrOrStderr(),
+		"Reminder: refresh the local comment snapshot before reviewing: make download-data (source: %s)\n\n",
+		cfg.publicCommentsPath(),
+	)
+}
+
+func normalizeCommentSource(source string) (string, error) {
+	source = strings.ToLower(strings.TrimSpace(source))
+	switch source {
+	case "", commentSourceSnapshot:
+		return commentSourceSnapshot, nil
+	case commentSourceDB:
+		return commentSourceDB, nil
+	default:
+		return "", fmt.Errorf("unknown comment source %q", source)
+	}
 }
 
 func writeJSON(w io.Writer, value any) error {
@@ -341,8 +432,9 @@ func printReviewMarkdown(w io.Writer, bundle commentmoderation.DraftBundle) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "## Decision Commands")
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "- Approve: `target/blog-cli comment authorize %s`\n", bundle.Comment.Id)
-	fmt.Fprintf(w, "- Keep pending: `target/blog-cli comment reject %s`\n", bundle.Comment.Id)
+	fmt.Fprintf(w, "- Approve on cloud DB: `make comment-authorize ID=%s`\n", bundle.Comment.Id)
+	fmt.Fprintf(w, "- Reject on cloud DB: `make comment-reject ID=%s`\n", bundle.Comment.Id)
+	fmt.Fprintln(w, "- Refresh local snapshot after a decision: `make download-data`")
 }
 
 func printDraftMarkdown(w io.Writer, bundle commentmoderation.DraftBundle) {
@@ -370,18 +462,21 @@ func printEmailDraftMarkdown(w io.Writer, title string, draft commentmoderation.
 }
 
 func commentState(comment dto.ArticleComment) string {
+	if comment.Rejected {
+		return "rejected"
+	}
 	if comment.Authorized {
 		return "approved"
 	}
 	return "pending"
 }
 
-func commentStateShort(name string, authorized bool) string {
-	if authorized {
+func commentStateShort(name string, state string) string {
+	if state == commentmoderation.StateApproved {
 		return "Mark one comment as approved"
 	}
 	if name == "reject" {
-		return "Keep one comment unapproved without deleting it"
+		return "Mark one comment as rejected without deleting it"
 	}
 	return "Update one comment state"
 }

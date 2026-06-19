@@ -38,6 +38,7 @@ func main() {
 		rateLim: rate.NewLimiter(rate.Every(time.Second), 10),
 	}
 
+	h.createTables()
 	go h.watchArticles()
 	go h.tickSnapshot()
 	go backup(db)

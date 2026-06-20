@@ -39,29 +39,87 @@ func TestReplyRecipients(t *testing.T) {
 	}
 }
 
+func TestReplyRecipientsHandlesLegacyAnonymousDisplayNames(t *testing.T) {
+	comments := []dto.ArticleComment{
+		{Id: "2", ArticleId: "a", Email: "legacy@example.com", Content: "old bare email"},
+		{Id: "3", ArticleId: "a", Email: "not an email", Content: "bad legacy email"},
+	}
+	target := dto.ArticleComment{
+		Id:        "5",
+		ArticleId: "a",
+		Email:     "Alice <alice@example.com>",
+		Content:   "reply [user:Anonymous #2] and [user:Anonymous #3]",
+	}
+
+	recipients := ReplyRecipients(target, comments)
+	want := []string{"legacy@example.com"}
+	if len(recipients) != len(want) {
+		t.Fatalf("recipients len = %d, want %d: %#v", len(recipients), len(want), recipients)
+	}
+	for i := range want {
+		if recipients[i] != want[i] {
+			t.Fatalf("recipients[%d] = %q, want %q", i, recipients[i], want[i])
+		}
+	}
+}
+
 func TestPublicComments(t *testing.T) {
 	comments := []dto.ArticleComment{
 		{Id: "1", Email: "Alice <alice@example.com>", Authorized: true},
 		{Id: "2", Email: "not an email", Authorized: true},
 		{Id: "3", Email: "spam@example.com", Authorized: false},
 		{Id: "4", Email: "rejected@example.com", Authorized: true, Rejected: true},
+		{Id: "5", Email: "foo@example.com", Authorized: true},
+		{Id: "6", Email: "\"Bad\x7fName\" <bad@example.com>", Authorized: true},
 	}
 
 	publicComments := PublicComments(comments)
-	if len(publicComments) != 2 {
-		t.Fatalf("public comments len = %d, want 2: %#v", len(publicComments), publicComments)
+	if len(publicComments) != 4 {
+		t.Fatalf("public comments len = %d, want 4: %#v", len(publicComments), publicComments)
 	}
 	if publicComments[0].Email != "Alice" {
 		t.Fatalf("public email = %q, want Alice", publicComments[0].Email)
 	}
-	if publicComments[1].Email != "" {
-		t.Fatalf("invalid public email = %q, want empty", publicComments[1].Email)
+	if publicComments[1].Email != "Anonymous #2" {
+		t.Fatalf("invalid public email = %q, want Anonymous #2", publicComments[1].Email)
 	}
-	if publicComments[0].Id != "1" || publicComments[1].Id != "2" {
-		t.Fatalf("public comment ids = %#v, want comments 1 and 2", publicComments)
+	if publicComments[2].Email != "Anonymous #5" {
+		t.Fatalf("bare public email = %q, want Anonymous #5", publicComments[2].Email)
+	}
+	if publicComments[3].Email != "Anonymous #6" {
+		t.Fatalf("bad display name public email = %q, want Anonymous #6", publicComments[3].Email)
+	}
+	if publicComments[0].Id != "1" || publicComments[1].Id != "2" || publicComments[2].Id != "5" || publicComments[3].Id != "6" {
+		t.Fatalf("public comment ids = %#v, want comments 1, 2, 5, and 6", publicComments)
 	}
 	if comments[0].Email != "Alice <alice@example.com>" {
 		t.Fatalf("PublicComments mutated input: %q", comments[0].Email)
+	}
+}
+
+func TestValidateCommentEmail(t *testing.T) {
+	tests := []struct {
+		name    string
+		email   string
+		wantErr bool
+	}{
+		{name: "valid", email: "Alice <alice@example.com>"},
+		{name: "trim spaces", email: "  Alice <alice@example.com>  "},
+		{name: "bare address", email: "alice@example.com", wantErr: true},
+		{name: "empty display name", email: `"" <alice@example.com>`, wantErr: true},
+		{name: "invalid address", email: "not an email", wantErr: true},
+		{name: "non-printable email", email: "Alice <alice@example.com>\x7f", wantErr: true},
+		{name: "non-printable display name", email: "\"Alice\x7f\" <alice@example.com>", wantErr: true},
+		{name: "reserved display name character", email: `"Alice [admin]" <alice@example.com>`, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ValidateCommentEmail(tt.email)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateCommentEmail(%q) error = %v, wantErr %v", tt.email, err, tt.wantErr)
+			}
+		})
 	}
 }
 

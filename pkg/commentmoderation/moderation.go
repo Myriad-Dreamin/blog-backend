@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/Myriad-Dreamin/blog-backend/pkg/dto"
 	"github.com/Myriad-Dreamin/blog-backend/pkg/iou"
@@ -29,6 +31,8 @@ const (
 
 	PublicCommentsFilename = "article-comments.json"
 	EmailCommentsFilename  = "article-email-comments.json"
+
+	anonymousDisplayName = "Anonymous"
 )
 
 var (
@@ -285,15 +289,35 @@ func PublicComments(comments []dto.ArticleComment) []dto.ArticleComment {
 			continue
 		}
 		publicComment := comment
-		addr, err := mail.ParseAddress(publicComment.Email)
-		if err != nil {
-			publicComment.Email = ""
-		} else {
-			publicComment.Email = addr.Name
-		}
+		publicComment.Email = PublicDisplayName(publicComment)
 		publicComments = append(publicComments, publicComment)
 	}
 	return publicComments
+}
+
+func ValidateCommentEmail(email string) (string, error) {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "", fmt.Errorf("empty email")
+	}
+	if err := validatePrintableUTF8(email, "email"); err != nil {
+		return "", err
+	}
+	addr, err := mail.ParseAddress(email)
+	if err != nil {
+		return "", fmt.Errorf("invalid email format: %w", err)
+	}
+	if strings.TrimSpace(addr.Address) == "" {
+		return "", fmt.Errorf("empty email address")
+	}
+	name := strings.TrimSpace(addr.Name)
+	if name == "" {
+		return "", fmt.Errorf("display name is required")
+	}
+	if err := ValidateDisplayName(name); err != nil {
+		return "", err
+	}
+	return email, nil
 }
 
 func BuildDraftBundle(target dto.ArticleComment, allComments []dto.ArticleComment, ownerEmail string) (DraftBundle, error) {
@@ -362,7 +386,7 @@ func ReplyRecipients(target dto.ArticleComment, allComments []dto.ArticleComment
 	for _, comment := range allComments {
 		commentsByID[comment.Id] = comment
 
-		name := DisplayName(comment.Email)
+		name := PublicDisplayName(comment)
 		if name == "" {
 			continue
 		}
@@ -376,6 +400,9 @@ func ReplyRecipients(target dto.ArticleComment, allComments []dto.ArticleComment
 	seen := map[string]struct{}{}
 	var recipients []string
 	appendRecipient := func(email string) {
+		if _, err := mail.ParseAddress(email); err != nil {
+			return
+		}
 		identity := emailIdentity(email)
 		if identity == "" || identity == targetIdentity {
 			return
@@ -405,13 +432,41 @@ func DisplayName(email string) string {
 	if email == "" {
 		return ""
 	}
-	if addr, err := mail.ParseAddress(email); err == nil && strings.TrimSpace(addr.Name) != "" {
-		return strings.TrimSpace(addr.Name)
+	if addr, err := mail.ParseAddress(email); err == nil {
+		name := strings.TrimSpace(addr.Name)
+		if ValidateDisplayName(name) == nil {
+			return name
+		}
 	}
-	if idx := strings.Index(email, "<"); idx >= 0 {
-		return strings.TrimSpace(email[:idx])
+	return ""
+}
+
+func PublicDisplayName(comment dto.ArticleComment) string {
+	if name := DisplayName(comment.Email); name != "" {
+		return name
 	}
-	return email
+	id := strings.TrimSpace(comment.Id)
+	if id != "" && isPublicFallbackID(id) {
+		return fmt.Sprintf("%s #%s", anonymousDisplayName, id)
+	}
+	return anonymousDisplayName
+}
+
+func ValidateDisplayName(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("display name is required")
+	}
+	if err := validatePrintableUTF8(name, "display name"); err != nil {
+		return err
+	}
+	for _, r := range name {
+		switch r {
+		case '[', ']', '<', '>':
+			return fmt.Errorf("display name contains reserved characters")
+		}
+	}
+	return nil
 }
 
 func GmailComposeURL(draft EmailDraft) string {
@@ -508,4 +563,25 @@ func emailIdentity(email string) string {
 		return strings.ToLower(addr.Address)
 	}
 	return strings.ToLower(email)
+}
+
+func isPublicFallbackID(id string) bool {
+	for _, r := range id {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func validatePrintableUTF8(value string, field string) error {
+	if !utf8.ValidString(value) {
+		return fmt.Errorf("%s must be valid UTF-8", field)
+	}
+	for _, r := range value {
+		if !unicode.IsPrint(r) {
+			return fmt.Errorf("%s contains non-printable characters", field)
+		}
+	}
+	return nil
 }
